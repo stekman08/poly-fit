@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import { canPlacePiece, generatePuzzle, placePiece } from '../../js/puzzle.js';
-import { SHAPES } from '../../js/shapes.js';
+import { canPlacePiece, generatePuzzle, placePiece, createGrid } from '../../js/puzzle.js';
+import { SHAPES, rotateShape, flipShape, normalizeShape } from '../../js/shapes.js';
 
 describe('Puzzle Generation Logic', () => {
 
@@ -53,6 +53,47 @@ describe('Puzzle Generation Logic', () => {
             const totalPieceBlocks = result.pieces.reduce((sum, p) => sum + p.shape.length, 0);
 
             expect(totalTargetBlocks).toBe(totalPieceBlocks);
+        });
+
+        it('should generate puzzles where the solution actually works', () => {
+            // Test multiple puzzles to catch intermittent bugs
+            for (let i = 0; i < 20; i++) {
+                const numPieces = 3 + (i % 3); // 3, 4, or 5 pieces
+                const result = generatePuzzle(numPieces);
+
+                // Recreate the solution by placing pieces at their solution positions
+                const solutionGrid = createGrid(5, 5);
+
+                for (const piece of result.pieces) {
+                    // Transform originalShape to get solutionShape
+                    let solShape = piece.originalShape;
+                    if (piece.solutionFlipped) {
+                        solShape = flipShape(solShape);
+                    }
+                    for (let r = 0; r < piece.solutionRotation; r++) {
+                        solShape = rotateShape(solShape);
+                    }
+                    solShape = normalizeShape(solShape);
+
+                    // Place on solution grid
+                    for (const block of solShape) {
+                        const x = piece.solutionX + block.x;
+                        const y = piece.solutionY + block.y;
+                        expect(y).toBeGreaterThanOrEqual(0);
+                        expect(y).toBeLessThan(5);
+                        expect(x).toBeGreaterThanOrEqual(0);
+                        expect(x).toBeLessThan(5);
+                        solutionGrid[y][x] += 1;
+                    }
+                }
+
+                // Verify solution grid matches target grid exactly
+                for (let y = 0; y < 5; y++) {
+                    for (let x = 0; x < 5; x++) {
+                        expect(solutionGrid[y][x]).toBe(result.targetGrid[y][x]);
+                    }
+                }
+            }
         });
     });
 });

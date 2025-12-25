@@ -141,6 +141,49 @@ export function generatePuzzle(numPieces = 3) {
                 continue; // Try again
             }
 
+            // CRITICAL: Verify the solution actually works by simulating placement
+            // This catches bugs where the transformed shape doesn't match what we expect
+            const verifyGrid = createGrid(5, 5);
+            let solutionValid = true;
+
+            for (const p of pieces) {
+                // Reconstruct the solution shape from originalShape + transforms
+                let solShape = SHAPES[p.shapeName];
+                if (p.solutionFlipped) {
+                    solShape = flipShape(solShape);
+                }
+                for (let r = 0; r < p.solutionRotation; r++) {
+                    solShape = rotateShape(solShape);
+                }
+                solShape = normalizeShape(solShape);
+
+                // Try to place at solution position
+                if (!canPlacePiece(verifyGrid, solShape, p.solutionX, p.solutionY)) {
+                    solutionValid = false;
+                    break;
+                }
+                placePiece(verifyGrid, solShape, p.solutionX, p.solutionY, 1);
+            }
+
+            // Compare verifyGrid with original grid
+            if (solutionValid) {
+                for (let y = 0; y < 5; y++) {
+                    for (let x = 0; x < 5; x++) {
+                        if (grid[y][x] !== verifyGrid[y][x]) {
+                            solutionValid = false;
+                            break;
+                        }
+                    }
+                    if (!solutionValid) break;
+                }
+            }
+
+            if (!solutionValid) {
+                console.error('Puzzle verification failed: solution does not recreate target grid');
+                retries++;
+                continue; // Try again
+            }
+
             return {
                 targetGrid: grid,
                 pieces: pieces.map(p => ({
