@@ -2,8 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
     <title>PolyFit - Neon Puzzle</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="A neon-themed puzzle game - fit the pieces to solve the challenge">
+    <meta name="theme-color" content="#00ffff">
+
+    <!-- Apple iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PolyFit">
+
+    <!-- Android Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="PolyFit">
+
+    <!-- Icons for all platforms -->
+    <link rel="icon" type="image/png" sizes="144x144" href="icons/icon-144.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="icons/icon-256.png">
+    <link rel="icon" type="image/png" sizes="384x384" href="icons/icon-384.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -41,5 +66,16 @@
     </div>
 
     <script type="module" src="js/main.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[PWA] Service Worker registered'))
+                    .catch(err => console.log('[PWA] Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

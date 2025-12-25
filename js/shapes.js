@@ -6,7 +6,7 @@
 // Rotate 90 degrees clockwise
 export function rotateShape(shape) {
     return shape.map(p => ({
-        x: p.y === 0 ? 0 : -p.y,
+        x: -p.y || 0,  // Convert -0 to 0
         y: p.x
     }));
 }
@@ -14,7 +14,7 @@ export function rotateShape(shape) {
 // Flip horizontally
 export function flipShape(shape) {
     return shape.map(p => ({
-        x: p.x === 0 ? 0 : -p.x,
+        x: -p.x || 0,  // Convert -0 to 0
         y: p.y
     }));
 }

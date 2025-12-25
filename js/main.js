@@ -41,26 +41,18 @@ function startLevel() {
         const dockY = 6;
 
         game.pieces.forEach((p, index) => {
-            // Simple linear layout
-            // Shift X so they don't overlap too much?
-            // Just place them spaced out.
-            // If they are wide, they might overlap.
-            // Better: Random positions in the dock area?
-            // Or just: -1, index * 3?
-
-            // To be safe, let's just create a row.
-            // But width might be issue.
-            // Let's use a simple layout logic.
-            const col = index % 3;
-            const row = Math.floor(index / 3);
+            // Layout pieces in dock area below the board
+            // Spread them evenly across the 5-wide board
+            const totalPieces = game.pieces.length;
+            const spacing = 5 / totalPieces;
+            const x = Math.floor(index * spacing);
 
             game.updatePieceState(p.id, {
-                x: col * 3, // Spaced out
-                y: dockY + (row * 3),
+                x: x,
+                y: dockY,
                 rotation: Math.floor(Math.random() * 4),
-                // Store home position for snap-back
-                dockX: col * 3,
-                dockY: dockY + (row * 3)
+                dockX: x,
+                dockY: dockY
             });
         });
 
@@ -96,6 +88,7 @@ function onInteraction(checkWin = false) {
 new InputHandler(
     {
         get pieces() { return game ? game.pieces : []; },
+        get targetGrid() { return game ? game.targetGrid : []; },
         updatePieceState: (id, s) => game && game.updatePieceState(id, s)
     },
     renderer,

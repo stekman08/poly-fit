@@ -19,8 +19,14 @@ export class InputHandler {
 
     bindEvents() {
         // Touch
-        this.canvas.addEventListener('touchstart', (e) => this.handleStart(e.touches[0], true), { passive: false });
-        window.addEventListener('touchmove', (e) => this.handleMove(e.touches[0], true), { passive: false });
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleStart(e.touches[0], true);
+        }, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+            if (this.draggingPiece) e.preventDefault();
+            this.handleMove(e.touches[0], true);
+        }, { passive: false });
         window.addEventListener('touchend', (e) => this.handleEnd(e), { passive: false });
 
         // Mouse
@@ -50,7 +56,7 @@ export class InputHandler {
     }
 
     handleStart(input, isTouch) {
-        if (isTouch) input.preventDefault && input.preventDefault(); // Stop scroll
+        // preventDefault now handled in bindEvents
 
         const pos = this.getCanvasCoords(input);
         const gridPos = this.renderer.pixelToGrid(pos.x, pos.y);
@@ -104,7 +110,7 @@ export class InputHandler {
 
     handleMove(input, isTouch) {
         if (!this.draggingPiece) return;
-        if (isTouch) input.preventDefault && input.preventDefault();
+        // preventDefault now handled in bindEvents
 
         const pos = this.getCanvasCoords(input);
 
