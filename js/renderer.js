@@ -1,5 +1,5 @@
-
 import { COLORS } from './shapes.js';
+import { ConfettiSystem } from './effects/Confetti.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -12,6 +12,9 @@ export class Renderer {
         // Visual configuration
         this.offsetX = 0; // Board centering
         this.offsetY = 0;
+
+        // Effects
+        this.confetti = new ConfettiSystem();
 
         // Resize observer
         window.addEventListener('resize', () => this.resize());
@@ -74,18 +77,58 @@ export class Renderer {
         this.drawTargetGrid(game.targetGrid);
         this.drawDockArea(game.pieces);
 
-        // Draw inactive pieces
-        // In this implementation, all pieces are 'active' participants in the game loop,
-        // but let's separate 'dragging' vs 'placed/sitting'.
-        // The game state has x,y.
+        // Draw hint if active
+        if (this.hintData) {
+            this.drawHint(this.hintData);
+        }
 
-        // Sort pieces: non-dragged first, dragged last (on top)
-        // Since we don't have 'isDragging' in game state explicitly, it's passed physically or inferred.
-        // We'll trust the order or just draw.
-
-        // Actually best way: Draw all pieces.
-        // Highlight active one?
         game.pieces.forEach(p => this.drawPiece(p));
+
+        // Update and draw effects
+        this.confetti.update();
+        this.confetti.draw(this.ctx);
+    }
+
+    showHint(hintData) {
+        this.hintData = hintData;
+    }
+
+    hideHint() {
+        this.hintData = null;
+    }
+
+    drawHint(hint) {
+        const { x, y, shape, color } = hint;
+
+        this.ctx.save();
+
+        // Pulsing glow effect
+        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.5;
+        this.ctx.globalAlpha = pulse;
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 3;
+        this.ctx.shadowColor = color;
+        this.ctx.shadowBlur = 20;
+
+        shape.forEach(block => {
+            const pos = this.gridToPixel(x + block.x, y + block.y);
+            const margin = 4;
+            const size = this.gridSize - (margin * 2);
+            this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
+        });
+
+        this.ctx.restore();
+    }
+
+    triggerWinEffect() {
+        // Burst confetti from center of the board
+        const centerX = this.offsetX + (2.5 * this.gridSize);
+        const centerY = this.offsetY + (2.5 * this.gridSize);
+        this.confetti.burst(centerX, centerY, 100);
+    }
+
+    clearEffects() {
+        this.confetti.clear();
     }
 
     drawTargetGrid(grid) {

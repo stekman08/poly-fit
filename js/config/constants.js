@@ -23,3 +23,4 @@ export const LEVEL_14_PIECE_MAX = 14;    // levels 4-14: 4 pieces
 
 // Timing
 export const WIN_OVERLAY_DELAY = 300;    // ms - delay before showing win overlay
+export const HINT_DELAY = 60000;         // ms - show hint after 1 minute inactivity

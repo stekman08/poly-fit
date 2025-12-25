@@ -7,7 +7,8 @@ import {
     DOCK_Y,
     LEVEL_3_PIECE_MAX,
     LEVEL_14_PIECE_MAX,
-    WIN_OVERLAY_DELAY
+    WIN_OVERLAY_DELAY,
+    HINT_DELAY
 } from './config/constants.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -18,11 +19,21 @@ const levelDisplay = document.getElementById('level-display');
 const renderer = new Renderer(canvas);
 let game = null;
 let level = 1;
+let lastInteractionTime = Date.now();
+let hintShown = false;
 
 // Loop
 function loop() {
     if (game) {
-        // Optional: Animation updates here
+        // Check for hint trigger
+        if (!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) {
+            const hint = game.getHint();
+            if (hint) {
+                renderer.showHint(hint);
+                hintShown = true;
+            }
+        }
+
         renderer.draw(game);
     }
     requestAnimationFrame(loop);
@@ -61,19 +72,27 @@ function startLevel() {
         return;
     }
 
+    renderer.clearEffects();
+    renderer.hideHint();
+    lastInteractionTime = Date.now();
+    hintShown = false;
     winOverlay.classList.add('hidden');
     levelDisplay.innerText = `LEVEL ${level}`;
 }
 
 // Check Win Handler
 function onInteraction(checkWin = false) {
-    // Force redraw?
-    // Loop handles redraws, but maybe we want instant feedback?
-    // Loop is 60fps, so good enough.
+    // Reset hint on any interaction
+    lastInteractionTime = Date.now();
+    if (hintShown) {
+        renderer.hideHint();
+        hintShown = false;
+    }
 
     if (checkWin && game) {
         if (game.checkWin()) {
             sounds.playWin();
+            renderer.triggerWinEffect();
             setTimeout(() => {
                 winOverlay.classList.remove('hidden');
             }, WIN_OVERLAY_DELAY);

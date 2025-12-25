@@ -14,6 +14,50 @@ export class Game {
             // We cache the transformed shape for rendering/collision
             currentShape: p.shape // Start with base shape
         }));
+
+        // Hint state
+        this.hintPiece = null;
+        this.hintShape = null;
+    }
+
+    // Get a hint: find a piece not in correct position and show its solution
+    getHint() {
+        for (const piece of this.pieces) {
+            // Check if piece is in correct position
+            const inCorrectPosition =
+                Math.round(piece.x) === piece.solutionX &&
+                Math.round(piece.y) === piece.solutionY &&
+                piece.rotation === piece.solutionRotation &&
+                piece.flipped === piece.solutionFlipped;
+
+            if (!inCorrectPosition) {
+                // Calculate the solution shape
+                let solutionShape = piece.originalShape;
+                if (piece.solutionFlipped) {
+                    solutionShape = flipShape(solutionShape);
+                }
+                for (let i = 0; i < piece.solutionRotation; i++) {
+                    solutionShape = rotateShape(solutionShape);
+                }
+                solutionShape = normalizeShape(solutionShape);
+
+                this.hintPiece = piece;
+                this.hintShape = solutionShape;
+                return {
+                    piece,
+                    x: piece.solutionX,
+                    y: piece.solutionY,
+                    shape: solutionShape,
+                    color: piece.color
+                };
+            }
+        }
+        return null;
+    }
+
+    clearHint() {
+        this.hintPiece = null;
+        this.hintShape = null;
     }
 
     // Update position/state of a piece
