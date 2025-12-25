@@ -22,7 +22,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx serve -l 3001',
+    command: 'npm start',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
   },
