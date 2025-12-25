@@ -188,3 +188,87 @@ describe('Game - piece state management', () => {
         expect(finalShape).toBe(originalShape);
     });
 });
+
+describe('Game - hint system', () => {
+    it('returns hint for piece not in correct position', () => {
+        const puzzleData = {
+            targetGrid: [
+                [1, 1],
+                [1, 1]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+                    originalShape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 0,
+                    solutionFlipped: false
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 0, y: 6 }); // In dock
+
+        const hint = game.getHint();
+        expect(hint).not.toBeNull();
+        expect(hint.x).toBe(0);
+        expect(hint.y).toBe(0);
+    });
+
+    it('returns null when all pieces are correctly placed', () => {
+        const puzzleData = {
+            targetGrid: [
+                [1, 1],
+                [0, 0]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+                    originalShape: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 0,
+                    solutionFlipped: false
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 0, y: 0, rotation: 0, flipped: false });
+
+        const hint = game.getHint();
+        expect(hint).toBeNull();
+    });
+
+    it('clearHint removes hint state', () => {
+        const puzzleData = {
+            targetGrid: [[1]],
+            pieces: [
+                {
+                    id: 0,
+                    shape: [{ x: 0, y: 0 }],
+                    originalShape: [{ x: 0, y: 0 }],
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 0,
+                    solutionFlipped: false
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.getHint();
+        expect(game.hintPiece).not.toBeNull();
+
+        game.clearHint();
+        expect(game.hintPiece).toBeNull();
+        expect(game.hintShape).toBeNull();
+    });
+});
