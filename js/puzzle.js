@@ -1,5 +1,5 @@
 
-import { SHAPES, COLORS, rotateShape, normalizeShape } from './shapes.js';
+import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
 
 export function createGrid(rows = 6, cols = 6) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
@@ -56,7 +56,11 @@ export function generatePuzzle(numPieces = 3) {
             const shapeName = getRandom(shapeKeys);
             let shape = SHAPES[shapeName];
 
-            // 2. Randomize rotation (0, 90, 180, 270)
+            // 2. Randomize flip (50% chance)
+            const flipped = Math.random() < 0.5;
+            if (flipped) shape = flipShape(shape);
+
+            // 3. Randomize rotation (0, 90, 180, 270)
             const rotations = Math.floor(Math.random() * 4);
             for (let r = 0; r < rotations; r++) shape = rotateShape(shape);
             // Normalize after rotation to ensure it's tight to 0,0
@@ -105,7 +109,8 @@ export function generatePuzzle(numPieces = 3) {
                             // Store solution for verification
                             solutionX: x,
                             solutionY: y,
-                            solutionRotation: rotations
+                            solutionRotation: rotations,
+                            solutionFlipped: flipped
                         });
                         placed = true;
                         break;

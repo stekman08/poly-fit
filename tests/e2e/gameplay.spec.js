@@ -13,24 +13,27 @@ test.describe('Gameplay - Win condition', () => {
                 id: p.id,
                 solutionX: p.solutionX,
                 solutionY: p.solutionY,
-                solutionRotation: p.solutionRotation
+                solutionRotation: p.solutionRotation,
+                solutionFlipped: p.solutionFlipped
             }));
         });
 
         // Place each piece at its solution position
         for (const piece of solution) {
-            await page.evaluate(({ id, x, y, rotation }) => {
+            await page.evaluate(({ id, x, y, rotation, flipped }) => {
                 const game = window.game;
                 game.updatePieceState(id, {
                     x: x,
                     y: y,
-                    rotation: rotation
+                    rotation: rotation,
+                    flipped: flipped
                 });
             }, {
                 id: piece.id,
                 x: piece.solutionX,
                 y: piece.solutionY,
-                rotation: piece.solutionRotation
+                rotation: piece.solutionRotation,
+                flipped: piece.solutionFlipped
             });
         }
 

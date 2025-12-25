@@ -11,6 +11,11 @@ export class InputHandler {
         this.dragStartPos = { x: 0, y: 0 }; // For tap detection
         this.dragStartTime = 0;
 
+        // Double-tap detection for flip
+        this.lastTapTime = 0;
+        this.lastTapPos = { x: 0, y: 0 };
+        this.lastTappedPiece = null;
+
         // Mobile offset config
         this.visualDragOffset = 0; // Pixels to shift piece UP when dragging
 
@@ -128,8 +133,28 @@ export class InputHandler {
         const dist = Math.hypot(pos.x - this.dragStartPos.x, pos.y - this.dragStartPos.y);
 
         if (dist < 10 && (now - this.dragStartTime) < 300) {
-            // Tap detected
-            this.handleRotate(this.draggingPiece);
+            // Tap detected - check for double-tap
+            const tapDist = Math.hypot(pos.x - this.lastTapPos.x, pos.y - this.lastTapPos.y);
+            const timeSinceLastTap = now - this.lastTapTime;
+
+            if (timeSinceLastTap < 400 && tapDist < 50 && this.lastTappedPiece === this.draggingPiece) {
+                // Double-tap on same piece → Flip
+                this.handleFlip(this.draggingPiece);
+                // Reset to prevent triple-tap
+                this.lastTapTime = 0;
+                this.lastTappedPiece = null;
+            } else {
+                // Single tap → Rotate
+                this.handleRotate(this.draggingPiece);
+                // Store for double-tap detection
+                this.lastTapTime = now;
+                this.lastTapPos = { ...pos };
+                this.lastTappedPiece = this.draggingPiece;
+            }
+        } else {
+            // Drag, not tap - reset double-tap detection
+            this.lastTapTime = 0;
+            this.lastTappedPiece = null;
         }
 
         // Snap to grid
@@ -187,6 +212,11 @@ export class InputHandler {
     handleRotate(piece) {
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
+        this.onInteraction();
+    }
+
+    handleFlip(piece) {
+        this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
         this.onInteraction();
     }
 }
