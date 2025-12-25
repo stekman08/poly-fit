@@ -42,20 +42,25 @@ test.describe('Gameplay - Win condition', () => {
         expect(isWin).toBe(true);
     });
 
-    test('next level button advances level', async ({ page }) => {
+    test('checkWin returns true when puzzle is solved', async ({ page }) => {
         await page.goto('/');
         await page.waitForSelector('#game-canvas');
 
-        // Manually show win overlay and click next
-        await page.evaluate(() => {
-            document.getElementById('win-overlay').classList.remove('hidden');
+        // Solve the puzzle by placing pieces at solution positions
+        const result = await page.evaluate(() => {
+            const game = window.game;
+            for (const piece of game.pieces) {
+                game.updatePieceState(piece.id, {
+                    x: piece.solutionX,
+                    y: piece.solutionY,
+                    rotation: piece.solutionRotation,
+                    flipped: piece.solutionFlipped
+                });
+            }
+            return game.checkWin();
         });
 
-        await page.click('#next-level-btn');
-        await page.waitForTimeout(300);
-
-        const levelText = await page.locator('#level-display').textContent();
-        expect(levelText).toContain('LEVEL 2');
+        expect(result).toBe(true);
     });
 });
 
@@ -193,11 +198,11 @@ test.describe('Gameplay - Invalid placement', () => {
     });
 });
 
-test.describe('Gameplay - Multiple levels', () => {
-    test('each level generates valid puzzle', async ({ page }) => {
-        await page.goto('/');
-
-        for (let level = 1; level <= 3; level++) {
+test.describe('Gameplay - Multiple puzzles', () => {
+    test('multiple page loads generate valid puzzles', async ({ page }) => {
+        // Test that puzzle generation is consistently valid across reloads
+        for (let i = 0; i < 3; i++) {
+            await page.goto('/');
             await page.waitForSelector('#game-canvas');
 
             // Verify puzzle is valid
@@ -222,15 +227,6 @@ test.describe('Gameplay - Multiple levels', () => {
             });
 
             expect(isValid).toBe(true);
-
-            // Go to next level
-            if (level < 3) {
-                await page.evaluate(() => {
-                    document.getElementById('win-overlay').classList.remove('hidden');
-                });
-                await page.click('#next-level-btn');
-                await page.waitForTimeout(300);
-            }
         }
     });
 });
