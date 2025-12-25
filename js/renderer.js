@@ -1,0 +1,184 @@
+
+import { COLORS } from './shapes.js';
+
+export class Renderer {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.width = canvas.width;
+        this.height = canvas.height;
+        this.gridSize = 40; // Default, will resize
+
+        // Visual configuration
+        this.offsetX = 0; // Board centering
+        this.offsetY = 0;
+
+        // Resize observer
+        window.addEventListener('resize', () => this.resize());
+        this.resize();
+    }
+
+    resize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+
+        // Vertical Layout Requirements:
+        // Board: 5 blocks
+        // Gap: 1 block
+        // Dock: 3 blocks (worst case pieces)
+        // Top/Bottom Padding: ~2 blocks equivalent
+        const totalGridHeight = 5 + 1 + 3 + 2;
+
+        // Horizontal:
+        // Board 5 blocks + Padding
+        const totalGridWidth = 7;
+
+        const maxCellH = this.height / totalGridHeight;
+        const maxCellW = this.width / totalGridWidth;
+
+        // Pick the smaller to ensure fit
+        this.gridSize = Math.floor(Math.min(maxCellH, maxCellW));
+
+        // Center Horizontally
+        this.offsetX = (this.width - (5 * this.gridSize)) / 2;
+
+        // Position board slightly higher than center center
+        // Top UI takes some space, so start grid at roughly 1.5 grid units down
+        this.offsetY = this.gridSize * 1.5;
+    }
+
+    // Convert Screen Pixels to Grid Coords (can be fractional)
+    pixelToGrid(px, py) {
+        return {
+            x: (px - this.offsetX) / this.gridSize,
+            y: (py - this.offsetY) / this.gridSize
+        };
+    }
+
+    // Convert Grid Coords to Screen Pixels
+    gridToPixel(gx, gy) {
+        return {
+            x: this.offsetX + gx * this.gridSize,
+            y: this.offsetY + gy * this.gridSize
+        };
+    }
+
+    clear() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+    }
+
+    draw(game) {
+        this.clear();
+        this.drawTargetGrid(game.targetGrid);
+        this.drawDockArea(game.pieces);
+
+        // Draw inactive pieces
+        // In this implementation, all pieces are 'active' participants in the game loop,
+        // but let's separate 'dragging' vs 'placed/sitting'.
+        // The game state has x,y.
+
+        // Sort pieces: non-dragged first, dragged last (on top)
+        // Since we don't have 'isDragging' in game state explicitly, it's passed physically or inferred.
+        // We'll trust the order or just draw.
+
+        // Actually best way: Draw all pieces.
+        // Highlight active one?
+        game.pieces.forEach(p => this.drawPiece(p));
+    }
+
+    drawTargetGrid(grid) {
+        const rows = grid.length;
+        const cols = grid[0].length;
+
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.lineWidth = 2;
+
+        // Draw grid slots
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid[r][c] === 1) { // It's a valid target spot
+                    const pos = this.gridToPixel(c, r);
+
+                    // Draw glowing pit
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.fillRect(pos.x, pos.y, this.gridSize, this.gridSize);
+
+                    this.ctx.shadowColor = '#00ffff';
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.strokeRect(pos.x, pos.y, this.gridSize, this.gridSize);
+                    this.ctx.shadowBlur = 0;
+                }
+            }
+        }
+        this.ctx.restore();
+    }
+
+    drawDockArea() {
+        // Optional: Draw a line separating board from hand?
+    }
+
+    drawPiece(piece, isDragging = false, dragOffset = { x: 0, y: 0 }) {
+        const shape = piece.currentShape;
+        const color = piece.color || COLORS[0];
+
+        this.ctx.save();
+
+        // Position
+        let x, y;
+
+        if (isDragging) {
+            // If dragging, piece.x/y might be updated by input to be fractional
+            // AND we might want to apply the "Touch Offset" (finger is below piece)
+            // But 'piece.x' in game state should ideally update to the LOGICAL position.
+            // The renderer receives the interpolated position.
+            // Let's assume piece.x/y is the TOP-LEFT of the bounding box in GRID units.
+
+            const pos = this.gridToPixel(piece.x, piece.y);
+            x = pos.x;
+            y = pos.y;
+
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = 20;
+            this.ctx.globalAlpha = 0.9;
+
+            // Interaction Scale up slightly
+            this.ctx.translate(x + (this.gridSize * 1.5), y + (this.gridSize * 1.5));
+            this.ctx.scale(1.1, 1.1);
+            this.ctx.translate(-(x + (this.gridSize * 1.5)), -(y + (this.gridSize * 1.5)));
+
+        } else {
+            const pos = this.gridToPixel(piece.x, piece.y);
+            x = pos.x;
+            y = pos.y;
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = 5;
+            this.ctx.globalAlpha = 0.8;
+        }
+
+        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = 'white';
+        this.ctx.lineWidth = 2;
+
+        shape.forEach(block => {
+            const bx = x + block.x * this.gridSize;
+            const by = y + block.y * this.gridSize;
+
+            // Draw block with small margin for "mosaic" look
+            const margin = 4;
+            const size = this.gridSize - (margin * 2);
+
+            this.ctx.fillRect(bx + margin, by + margin, size, size);
+            this.ctx.strokeRect(bx + margin, by + margin, size, size);
+
+            // Inner glossy highlight
+            this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            this.ctx.fillRect(bx + margin, by + margin, size, size / 2);
+            this.ctx.fillStyle = color; // reset
+        });
+
+        this.ctx.restore();
+    }
+}
