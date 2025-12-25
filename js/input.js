@@ -34,16 +34,6 @@ export class InputHandler {
         window.addEventListener('mousemove', (e) => this.handleMove(e, false));
         window.addEventListener('mouseup', (e) => this.handleEnd(e));
 
-        // Flip Button
-        const flipBtn = document.getElementById('flip-btn');
-        if (flipBtn) {
-            flipBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // prevent canvas click
-                this.handleFlip();
-            });
-            // Stop propagation on inputs to prevent canvas bleed
-            flipBtn.addEventListener('touchstart', (e) => e.stopPropagation());
-        }
     }
 
     // Convert event client coords to canvas relative coords
@@ -198,16 +188,5 @@ export class InputHandler {
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
         this.onInteraction();
-    }
-
-    handleFlip() {
-        // Flip the last active piece
-        // Ideally we track 'lastActivePiece'
-        // For now, let's just flip draggingPiece if active, or the last one in the list (since we move active to end)
-        const target = this.draggingPiece || this.game.pieces[this.game.pieces.length - 1];
-        if (target) {
-            this.game.updatePieceState(target.id, { flipped: !target.flipped });
-            this.onInteraction(true);
-        }
     }
 }

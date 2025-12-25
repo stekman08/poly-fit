@@ -123,32 +123,6 @@ test.describe('Gameplay - Rotation', () => {
     });
 });
 
-test.describe('Gameplay - Flip', () => {
-    test('flip button toggles piece flip state', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
-
-        // Get initial flip state
-        const initialFlipped = await page.evaluate(() => {
-            // Move last piece to "active" by selecting it
-            const pieces = window.game.pieces;
-            return pieces[pieces.length - 1].flipped;
-        });
-
-        // Click flip button
-        await page.click('#flip-btn');
-        await page.waitForTimeout(100);
-
-        // Check flip state changed
-        const newFlipped = await page.evaluate(() => {
-            const pieces = window.game.pieces;
-            return pieces[pieces.length - 1].flipped;
-        });
-
-        expect(newFlipped).toBe(!initialFlipped);
-    });
-});
-
 test.describe('Gameplay - Invalid placement', () => {
     test('piece returns to dock when placed on wall', async ({ page }) => {
         await page.goto('/');
