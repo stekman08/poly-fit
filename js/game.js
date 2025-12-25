@@ -61,6 +61,14 @@ export class Game {
         const rows = this.targetGrid.length;
         const cols = this.targetGrid[0].length;
 
+        // Safety check: All pieces must be on the board (not in dock)
+        // Dock area is y >= rows (typically y=6 for a 5-row board)
+        for (const piece of this.pieces) {
+            if (piece.y >= rows) {
+                return false; // Piece still in dock
+            }
+        }
+
         // Create a blank grid to map current placements
         const currentGrid = Array(rows).fill(0).map(() => Array(cols).fill(0));
 

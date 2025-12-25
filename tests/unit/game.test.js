@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import { Game } from '../js/game.js';
-import { SHAPES } from '../js/shapes.js';
+import { Game } from '../../js/game.js';
+import { SHAPES } from '../../js/shapes.js';
 
 describe('Game State', () => {
 

@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { rotateShape, flipShape, normalizeShape } from '../js/shapes.js';
+import { rotateShape, flipShape, normalizeShape } from '../../js/shapes.js';
 
 describe('Shape Transformations', () => {
     // Define a simple L-shape:

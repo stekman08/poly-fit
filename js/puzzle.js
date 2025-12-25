@@ -101,7 +101,11 @@ export function generatePuzzle(numPieces = 3) {
                             shapeName,
                             originalShape: SHAPES[shapeName],
                             color: COLORS[i % COLORS.length],
-                            shape: shape
+                            shape: shape,
+                            // Store solution for verification
+                            solutionX: x,
+                            solutionY: y,
+                            solutionRotation: rotations
                         });
                         placed = true;
                         break;
@@ -116,9 +120,22 @@ export function generatePuzzle(numPieces = 3) {
         }
 
         if (success) {
-            // Check if the resulting shape is contiguous?
-            // Ubongo puzzles are usually one blob, but disjoint is also harder/interesting.
-            // For now, accept any result.
+            // Verify: target spots should equal total piece blocks
+            let targetSpots = 0;
+            for (const row of grid) {
+                for (const cell of row) {
+                    if (cell === 1) targetSpots++;
+                }
+            }
+            let totalBlocks = pieces.reduce((sum, p) => sum + p.shape.length, 0);
+
+            if (targetSpots !== totalBlocks) {
+                console.error('Puzzle verification failed: target/blocks mismatch',
+                    { targetSpots, totalBlocks });
+                retries++;
+                continue; // Try again
+            }
+
             return {
                 targetGrid: grid,
                 pieces: pieces.map(p => ({

@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import { canPlacePiece, generatePuzzle, placePiece } from '../js/puzzle.js';
-import { SHAPES } from '../js/shapes.js';
+import { canPlacePiece, generatePuzzle, placePiece } from '../../js/puzzle.js';
+import { SHAPES } from '../../js/shapes.js';
 
 describe('Puzzle Generation Logic', () => {
 

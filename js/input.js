@@ -152,22 +152,30 @@ export class InputHandler {
         snappedX = Math.max(0, Math.min(snappedX, 5 - pieceW));
         snappedY = Math.max(0, snappedY);
 
-        // Validation: Check if placed on "Walls" (0 in targetGrid)
+        // Validation: Piece must be ENTIRELY on valid target spots (1s in grid)
+        // OR entirely in dock area (below grid). No partial placements allowed.
         let isValid = true;
         const grid = this.game.targetGrid;
+        const rows = grid.length;
+        const cols = grid[0].length;
 
         for (const block of shape) {
             const bx = snappedX + block.x;
             const by = snappedY + block.y;
 
-            // If inside board area (0..4), must be a Target Spot (1)
-            // If outside (Dock), generally allowed.
-            if (by < grid.length && bx < grid[0].length) {
-                if (grid[by][bx] === 0) {
+            // Check if block is inside the board area
+            if (by >= 0 && by < rows && bx >= 0 && bx < cols) {
+                // Inside board - must be on a target spot (1)
+                if (grid[by][bx] !== 1) {
                     isValid = false;
                     break;
                 }
+            } else if (by < rows) {
+                // Block is horizontally outside board but vertically inside - invalid
+                isValid = false;
+                break;
             }
+            // If by >= rows (dock area), that's allowed - piece stays in dock
         }
 
         if (!isValid) {
