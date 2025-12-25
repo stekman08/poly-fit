@@ -10,8 +10,8 @@ export const DOCK_Y = 6;
 // Gesture detection thresholds
 export const TAP_MAX_DISTANCE = 10;      // pixels - max movement for tap
 export const TAP_MAX_DURATION = 300;     // ms - max duration for tap
-export const DOUBLE_TAP_WINDOW = 400;    // ms - max time between taps
-export const DOUBLE_TAP_DISTANCE = 50;   // pixels - max distance between taps
+export const SWIPE_MIN_DISTANCE = 30;    // pixels - min movement for swipe
+export const SWIPE_MAX_DURATION = 300;   // ms - max duration for swipe (must be fast)
 
 // Mobile UX
 export const TOUCH_LIFT_OFFSET = 100;    // pixels - lift piece above finger

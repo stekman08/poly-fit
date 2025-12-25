@@ -5,6 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "version": "node scripts/generate-version.js",
+    "prestart": "npm run version",
     "start": "serve -l 3001",
     "test": "vitest run",
     "test:e2e": "playwright test",

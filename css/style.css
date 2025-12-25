@@ -1,4 +1,10 @@
 :root {
+    /* Safe area insets for notch/dynamic island */
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+
     --bg-color: #050505;
     --neon-blue: #00ffff;
     --neon-pink: #ff00ff;
@@ -56,6 +62,10 @@ body {
     flex-direction: column;
     justify-content: space-between;
     padding: 20px;
+    padding-top: max(20px, var(--sat));
+    padding-bottom: max(20px, var(--sab));
+    padding-left: max(20px, var(--sal));
+    padding-right: max(20px, var(--sar));
     box-sizing: border-box;
 }
 
@@ -63,7 +73,6 @@ body {
 #header {
     text-align: center;
     pointer-events: auto;
-    margin-top: 10px;
 }
 
 .neon-text {
@@ -166,4 +175,18 @@ body {
 .glass-modal h2 {
     margin-top: 0;
     margin-bottom: 30px;
+}
+
+/* Version Info */
+.version-info {
+    position: absolute;
+    bottom: max(12px, var(--sab));
+    right: max(16px, var(--sar));
+    font-family: var(--font-main);
+    font-size: 10px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 1px;
 }

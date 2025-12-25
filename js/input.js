@@ -2,11 +2,9 @@ import { sounds } from './sounds.js';
 import {
     TAP_MAX_DISTANCE,
     TAP_MAX_DURATION,
-    DOUBLE_TAP_WINDOW,
-    DOUBLE_TAP_DISTANCE,
-    TOUCH_LIFT_OFFSET,
-    GRID_ROWS,
-    GRID_COLS
+    SWIPE_MIN_DISTANCE,
+    SWIPE_MAX_DURATION,
+    TOUCH_LIFT_OFFSET
 } from './config/constants.js';
 
 export class InputHandler {
@@ -18,13 +16,8 @@ export class InputHandler {
 
         this.draggingPiece = null;
         this.dragOffset = { x: 0, y: 0 }; // Offset from top-left of piece to cursor
-        this.dragStartPos = { x: 0, y: 0 }; // For tap detection
+        this.dragStartPos = { x: 0, y: 0 }; // For gesture detection
         this.dragStartTime = 0;
-
-        // Double-tap detection for flip
-        this.lastTapTime = 0;
-        this.lastTapPos = { x: 0, y: 0 };
-        this.lastTappedPiece = null;
 
         // Mobile offset config
         this.visualDragOffset = 0; // Pixels to shift piece UP when dragging
@@ -136,35 +129,20 @@ export class InputHandler {
     handleEnd(e) {
         if (!this.draggingPiece) return;
 
-        // Check for Tap (Rotate)
         const now = Date.now();
         const pos = this.getCanvasCoords(e.changedTouches ? e.changedTouches[0] : e);
         const dist = Math.hypot(pos.x - this.dragStartPos.x, pos.y - this.dragStartPos.y);
+        const duration = now - this.dragStartTime;
 
-        if (dist < TAP_MAX_DISTANCE && (now - this.dragStartTime) < TAP_MAX_DURATION) {
-            // Tap detected - check for double-tap
-            const tapDist = Math.hypot(pos.x - this.lastTapPos.x, pos.y - this.lastTapPos.y);
-            const timeSinceLastTap = now - this.lastTapTime;
-
-            if (timeSinceLastTap < DOUBLE_TAP_WINDOW && tapDist < DOUBLE_TAP_DISTANCE && this.lastTappedPiece === this.draggingPiece) {
-                // Double-tap on same piece → Flip
-                this.handleFlip(this.draggingPiece);
-                // Reset to prevent triple-tap
-                this.lastTapTime = 0;
-                this.lastTappedPiece = null;
-            } else {
-                // Single tap → Rotate
-                this.handleRotate(this.draggingPiece);
-                // Store for double-tap detection
-                this.lastTapTime = now;
-                this.lastTapPos = { ...pos };
-                this.lastTappedPiece = this.draggingPiece;
-            }
-        } else {
-            // Drag, not tap - reset double-tap detection
-            this.lastTapTime = 0;
-            this.lastTappedPiece = null;
+        // Gesture detection: swipe vs tap vs drag
+        if (dist >= SWIPE_MIN_DISTANCE && duration < SWIPE_MAX_DURATION) {
+            // Fast swipe → Flip
+            this.handleFlip(this.draggingPiece);
+        } else if (dist < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
+            // Tap → Rotate
+            this.handleRotate(this.draggingPiece);
         }
+        // Else: regular drag, just snap to grid
 
         // Snap to grid
         let snappedX = Math.round(this.draggingPiece.x);
