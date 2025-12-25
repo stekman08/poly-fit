@@ -13,7 +13,6 @@ import {
 
 const canvas = document.getElementById('game-canvas');
 const winOverlay = document.getElementById('win-overlay');
-const nextBtn = document.getElementById('next-level-btn');
 const levelDisplay = document.getElementById('level-display');
 
 const renderer = new Renderer(canvas);
@@ -49,21 +48,29 @@ function startLevel() {
         game = new Game(puzzleData);
         window.game = game; // Expose for testing
 
-        // Scatter pieces in dock area below the grid
-        game.pieces.forEach((p, index) => {
-            // Layout pieces in dock area below the board
-            // Spread them evenly across the 5-wide board
-            const totalPieces = game.pieces.length;
-            const spacing = 5 / totalPieces;
-            const x = Math.floor(index * spacing);
+        // Position pieces in dock area in rows
+        let currentX = 0;
+        let currentY = DOCK_Y;
+
+        game.pieces.forEach((p) => {
+            const pieceWidth = Math.max(...p.shape.map(b => b.x)) + 1;
+            const pieceHeight = Math.max(...p.shape.map(b => b.y)) + 1;
+
+            // If piece doesn't fit on current row, move to next row
+            if (currentX + pieceWidth > 5) {
+                currentX = 0;
+                currentY += 3; // Move down by max piece height
+            }
 
             game.updatePieceState(p.id, {
-                x: x,
-                y: DOCK_Y,
-                rotation: Math.floor(Math.random() * 4),
-                dockX: x,
-                dockY: DOCK_Y
+                x: currentX,
+                y: currentY,
+                rotation: 0,
+                dockX: currentX,
+                dockY: currentY
             });
+
+            currentX += pieceWidth;
         });
 
     } catch (e) {
@@ -95,6 +102,11 @@ function onInteraction(checkWin = false) {
             renderer.triggerWinEffect();
             setTimeout(() => {
                 winOverlay.classList.remove('hidden');
+                // Auto-advance after showing message
+                setTimeout(() => {
+                    level++;
+                    startLevel();
+                }, 1500);
             }, WIN_OVERLAY_DELAY);
         }
     }
@@ -110,12 +122,6 @@ new InputHandler(
     renderer,
     onInteraction
 );
-
-// Events
-nextBtn.addEventListener('click', () => {
-    level++;
-    startLevel();
-});
 
 // Start
 startLevel();

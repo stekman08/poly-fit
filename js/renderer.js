@@ -47,9 +47,8 @@ export class Renderer {
         // Center Horizontally
         this.offsetX = (this.width - (5 * this.gridSize)) / 2;
 
-        // Position board slightly higher than center center
-        // Top UI takes some space, so start grid at roughly 1.5 grid units down
-        this.offsetY = this.gridSize * 1.5;
+        // Position board below header with some padding
+        this.offsetY = this.gridSize * 2.5;
     }
 
     // Convert Screen Pixels to Grid Coords (can be fractional)
@@ -145,8 +144,8 @@ export class Renderer {
                 if (grid[r][c] === 1) { // It's a valid target spot
                     const pos = this.gridToPixel(c, r);
 
-                    // Draw glowing pit
-                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    // Draw visible pit with darker teal fill
+                    this.ctx.fillStyle = 'rgba(0, 60, 70, 0.8)';
                     this.ctx.fillRect(pos.x, pos.y, this.gridSize, this.gridSize);
 
                     this.ctx.shadowColor = '#00ffff';
