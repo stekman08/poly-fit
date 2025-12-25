@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vitest:*)",
+      "Bash(cat:*)",
+      "Bash(pgrep:*)",
+      "Bash(curl:*)",
+      "Bash(node scripts/generate-icons.js:*)",
+      "Bash(node scripts/generate-icons.cjs:*)",
+      "Bash(file:*)",
+      "Bash(npm run test:e2e:*)"
+    ]
+  }
+}
