@@ -1,3 +1,13 @@
+import { sounds } from './sounds.js';
+import {
+    TAP_MAX_DISTANCE,
+    TAP_MAX_DURATION,
+    DOUBLE_TAP_WINDOW,
+    DOUBLE_TAP_DISTANCE,
+    TOUCH_LIFT_OFFSET,
+    GRID_ROWS,
+    GRID_COLS
+} from './config/constants.js';
 
 export class InputHandler {
     constructor(game, renderer, onInteraction) {
@@ -89,8 +99,7 @@ export class InputHandler {
                 this.dragStartTime = Date.now();
 
                 // Mobile: Lift piece up visually so finger doesn't hide it
-                // We add a vertical offset in PIXELS
-                this.visualDragOffset = isTouch ? 100 : 0;
+                this.visualDragOffset = isTouch ? TOUCH_LIFT_OFFSET : 0;
 
                 // Move piece to "active" layer (end of list)
                 // Remove and push
@@ -132,12 +141,12 @@ export class InputHandler {
         const pos = this.getCanvasCoords(e.changedTouches ? e.changedTouches[0] : e);
         const dist = Math.hypot(pos.x - this.dragStartPos.x, pos.y - this.dragStartPos.y);
 
-        if (dist < 10 && (now - this.dragStartTime) < 300) {
+        if (dist < TAP_MAX_DISTANCE && (now - this.dragStartTime) < TAP_MAX_DURATION) {
             // Tap detected - check for double-tap
             const tapDist = Math.hypot(pos.x - this.lastTapPos.x, pos.y - this.lastTapPos.y);
             const timeSinceLastTap = now - this.lastTapTime;
 
-            if (timeSinceLastTap < 400 && tapDist < 50 && this.lastTappedPiece === this.draggingPiece) {
+            if (timeSinceLastTap < DOUBLE_TAP_WINDOW && tapDist < DOUBLE_TAP_DISTANCE && this.lastTappedPiece === this.draggingPiece) {
                 // Double-tap on same piece → Flip
                 this.handleFlip(this.draggingPiece);
                 // Reset to prevent triple-tap
@@ -197,6 +206,9 @@ export class InputHandler {
             // Revert to Dock
             snappedX = this.draggingPiece.dockX;
             snappedY = this.draggingPiece.dockY;
+        } else if (snappedY < rows) {
+            // Valid placement on the board - play snap sound
+            sounds.playSnap();
         }
 
         this.game.updatePieceState(this.draggingPiece.id, {
@@ -212,11 +224,13 @@ export class InputHandler {
     handleRotate(piece) {
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
+        sounds.playRotate();
         this.onInteraction();
     }
 
     handleFlip(piece) {
         this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
+        sounds.playFlip();
         this.onInteraction();
     }
 }

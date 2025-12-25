@@ -1,8 +1,14 @@
-
 import { generatePuzzle } from './puzzle.js';
 import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import { InputHandler } from './input.js';
+import { sounds } from './sounds.js';
+import {
+    DOCK_Y,
+    LEVEL_3_PIECE_MAX,
+    LEVEL_14_PIECE_MAX,
+    WIN_OVERLAY_DELAY
+} from './config/constants.js';
 
 const canvas = document.getElementById('game-canvas');
 const winOverlay = document.getElementById('win-overlay');
@@ -23,10 +29,8 @@ function loop() {
 }
 
 function startLevel() {
-    // 1. Generate new puzzle
-    // Difficulty: Increase piece count?
-    // Levels 1-3: 3 pieces. Levels 4+: 4 pieces.
-    const piecesCount = level <= 3 ? 3 : 4;
+    // Difficulty scaling: more pieces at higher levels
+    const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3 : level <= LEVEL_14_PIECE_MAX ? 4 : 5;
 
     // Retry generation until success (handled inside, throws if fails)
     try {
@@ -34,12 +38,7 @@ function startLevel() {
         game = new Game(puzzleData);
         window.game = game; // Expose for testing
 
-        // 2. Scatter pieces in "Dock"
-        // Dock is below the 5x5 grid.
-        // Grid is 0..4 (Y). Dock start at Y=6?
-        // Scatter X: 0..4
-        const dockY = 6;
-
+        // Scatter pieces in dock area below the grid
         game.pieces.forEach((p, index) => {
             // Layout pieces in dock area below the board
             // Spread them evenly across the 5-wide board
@@ -49,10 +48,10 @@ function startLevel() {
 
             game.updatePieceState(p.id, {
                 x: x,
-                y: dockY,
+                y: DOCK_Y,
                 rotation: Math.floor(Math.random() * 4),
                 dockX: x,
-                dockY: dockY
+                dockY: DOCK_Y
             });
         });
 
@@ -74,12 +73,10 @@ function onInteraction(checkWin = false) {
 
     if (checkWin && game) {
         if (game.checkWin()) {
-            // Trigger Win
-            // Delay slightly for effect
+            sounds.playWin();
             setTimeout(() => {
                 winOverlay.classList.remove('hidden');
-                // Fireworks?
-            }, 300);
+            }, WIN_OVERLAY_DELAY);
         }
     }
 }
