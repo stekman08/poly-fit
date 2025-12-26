@@ -24,6 +24,7 @@ let level = 1;
 let maxLevel = parseInt(localStorage.getItem('polyfit-max-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
+let isWinning = false;
 
 function loop() {
     if (game) {
@@ -47,6 +48,9 @@ function startLevel() {
         const puzzleData = generatePuzzle(piecesCount);
         game = new Game(puzzleData);
         window.game = game;
+        window.getLevel = () => level;
+        window.isWinning = () => isWinning;
+        window.triggerCheckWin = () => onInteraction(true);
 
         let currentX = 0;
         let currentY = DOCK_Y;
@@ -81,6 +85,7 @@ function startLevel() {
     renderer.hideHint();
     lastInteractionTime = Date.now();
     hintShown = false;
+    isWinning = false;
     winOverlay.classList.add('hidden');
     levelDisplay.innerText = `LEVEL ${level}`;
 }
@@ -92,7 +97,8 @@ function onInteraction(checkWin = false) {
         hintShown = false;
     }
 
-    if (checkWin && game && game.checkWin()) {
+    if (checkWin && game && !isWinning && game.checkWin()) {
+        isWinning = true;
         sounds.playWin();
         renderer.triggerWinEffect();
         setTimeout(() => {
