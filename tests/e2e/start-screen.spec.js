@@ -9,6 +9,8 @@ test.describe('Start Screen', () => {
 
     test('New Game button starts at level 1', async ({ page }) => {
         await page.goto('/');
+        // Skip tutorial in tests
+        await page.evaluate(() => localStorage.setItem('polyfit-tutorial-shown', '3'));
         await page.click('#btn-new-game');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
@@ -43,6 +45,7 @@ test.describe('Start Screen', () => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('polyfit-max-level', '3');
+            localStorage.setItem('polyfit-tutorial-shown', '3'); // Skip tutorial
         });
         await page.reload();
         await page.waitForSelector('#start-screen');

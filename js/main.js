@@ -18,6 +18,12 @@ const levelDisplay = document.getElementById('level-display');
 const startScreen = document.getElementById('start-screen');
 const btnNewGame = document.getElementById('btn-new-game');
 const btnContinue = document.getElementById('btn-continue');
+const tutorialOverlay = document.getElementById('tutorial-overlay');
+const btnGotIt = document.getElementById('btn-got-it');
+
+// Tutorial configuration
+const TUTORIAL_STORAGE_KEY = 'polyfit-tutorial-shown';
+const TUTORIAL_MAX_SHOWS = 3;
 
 const renderer = new Renderer(canvas);
 let game = null;
@@ -26,6 +32,29 @@ let maxLevel = parseInt(localStorage.getItem('polyfit-max-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 let isWinning = false;
+
+// Check if tutorial should be shown (first 3 times)
+function shouldShowTutorial() {
+    try {
+        const timesShown = parseInt(localStorage.getItem(TUTORIAL_STORAGE_KEY) || '0', 10);
+        if (timesShown >= TUTORIAL_MAX_SHOWS) {
+            return false;
+        }
+        localStorage.setItem(TUTORIAL_STORAGE_KEY, String(timesShown + 1));
+        return true;
+    } catch {
+        return true; // Show if localStorage unavailable
+    }
+}
+
+function showTutorial() {
+    tutorialOverlay.classList.remove('hidden');
+}
+
+function hideTutorial() {
+    tutorialOverlay.classList.add('hidden');
+    startLevel();
+}
 
 function loop() {
     if (game) {
@@ -156,14 +185,24 @@ function showStartScreen() {
 btnNewGame.addEventListener('click', () => {
     level = 1;
     startScreen.classList.add('hidden');
-    startLevel();
+    if (shouldShowTutorial()) {
+        showTutorial();
+    } else {
+        startLevel();
+    }
 });
 
 btnContinue.addEventListener('click', () => {
     level = maxLevel;
     startScreen.classList.add('hidden');
-    startLevel();
+    if (shouldShowTutorial()) {
+        showTutorial();
+    } else {
+        startLevel();
+    }
 });
+
+btnGotIt.addEventListener('click', hideTutorial);
 
 showStartScreen();
 loop();

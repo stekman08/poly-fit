@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 async function startGame(page) {
     await page.goto('/');
+    // Skip tutorial in tests
+    await page.evaluate(() => localStorage.setItem('polyfit-tutorial-shown', '3'));
     await page.waitForSelector('#start-screen');
     await page.click('#btn-new-game');
     await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
@@ -122,7 +124,10 @@ test.describe('Touch interactions', () => {
 test.describe('Dock visibility', () => {
     test('all pieces visible at level 7 (4 pieces)', async ({ page }) => {
         await page.goto('/');
-        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '7'));
+        await page.evaluate(() => {
+            localStorage.setItem('polyfit-max-level', '7');
+            localStorage.setItem('polyfit-tutorial-shown', '3'); // Skip tutorial
+        });
         await page.reload();
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
@@ -148,7 +153,10 @@ test.describe('Dock visibility', () => {
 
     test('all pieces visible at level 15 (5 pieces)', async ({ page }) => {
         await page.goto('/');
-        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '15'));
+        await page.evaluate(() => {
+            localStorage.setItem('polyfit-max-level', '15');
+            localStorage.setItem('polyfit-tutorial-shown', '3'); // Skip tutorial
+        });
         await page.reload();
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
