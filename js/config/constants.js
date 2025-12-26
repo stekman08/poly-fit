@@ -7,7 +7,9 @@ export const GRID_ROWS = 5;
 export const GRID_COLS = 5;
 export const DOCK_Y = 6;
 export const MAX_DOCK_Y = 13; // Maximum Y position to keep pieces visible (increased for more dock space)
-export const DOCK_PIECE_SCALE = 0.65; // Scale pieces down in dock for better visibility
+export const DOCK_PIECE_SCALE = 0.5;  // Scale pieces down in dock (50%)
+export const BOARD_PIECE_SCALE = 1.0; // Full size on board
+export const GHOST_ALPHA = 0.4;       // Shadow/preview transparency on board
 
 // Gesture detection thresholds
 export const TAP_MAX_DISTANCE = 10;      // pixels - max movement for tap
