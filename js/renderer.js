@@ -1,5 +1,6 @@
 import { COLORS } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
+import { DOCK_Y, DOCK_PIECE_SCALE } from './config/constants.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -19,6 +20,9 @@ export class Renderer {
         // Ghost preview for dragging
         this.ghostPreview = null;
 
+        // Currently dragging piece (set by InputHandler)
+        this.draggingPieceId = null;
+
         // Resize observer
         window.addEventListener('resize', () => this.resize());
         this.resize();
@@ -33,9 +37,9 @@ export class Renderer {
         // Vertical Layout Requirements:
         // Board: 5 blocks
         // Gap: 1 block
-        // Dock: 6 blocks (multiple rows of pieces)
+        // Dock: 8 blocks (more rows for scaled pieces)
         // Top/Bottom Padding: ~2 blocks equivalent
-        const totalGridHeight = 5 + 1 + 6 + 2;
+        const totalGridHeight = 5 + 1 + 8 + 2; // = 16 (was 14)
 
         // Horizontal:
         // Board 5 blocks + Padding
@@ -89,7 +93,10 @@ export class Renderer {
             this.drawGhostPreview(this.ghostPreview);
         }
 
-        game.pieces.forEach(p => this.drawPiece(p));
+        game.pieces.forEach(p => {
+            const isDragging = p.id === this.draggingPieceId;
+            this.drawPiece(p, isDragging);
+        });
 
         // Update and draw effects
         this.confetti.update();
@@ -199,42 +206,49 @@ export class Renderer {
         // Optional: Draw a line separating board from hand?
     }
 
-    drawPiece(piece, isDragging = false, dragOffset = { x: 0, y: 0 }) {
+    drawPiece(piece, isDragging = false) {
         const shape = piece.currentShape;
         const color = piece.color || COLORS[0];
+        const inDock = piece.y >= DOCK_Y;
 
         this.ctx.save();
 
-        // Position
-        let x, y;
+        const pos = this.gridToPixel(piece.x, piece.y);
+        let x = pos.x;
+        let y = pos.y;
+
+        // Determine scale and effects based on state
+        let scale = 1.0;
 
         if (isDragging) {
-            // If dragging, piece.x/y might be updated by input to be fractional
-            // AND we might want to apply the "Touch Offset" (finger is below piece)
-            // But 'piece.x' in game state should ideally update to the LOGICAL position.
-            // The renderer receives the interpolated position.
-            // Let's assume piece.x/y is the TOP-LEFT of the bounding box in GRID units.
-
-            const pos = this.gridToPixel(piece.x, piece.y);
-            x = pos.x;
-            y = pos.y;
-
+            // Dragging: slight scale up, strong glow
+            scale = 1.1;
             this.ctx.shadowColor = color;
             this.ctx.shadowBlur = 20;
-            this.ctx.globalAlpha = 0.9;
-
-            // Interaction Scale up slightly
-            this.ctx.translate(x + (this.gridSize * 1.5), y + (this.gridSize * 1.5));
-            this.ctx.scale(1.1, 1.1);
-            this.ctx.translate(-(x + (this.gridSize * 1.5)), -(y + (this.gridSize * 1.5)));
-
-        } else {
-            const pos = this.gridToPixel(piece.x, piece.y);
-            x = pos.x;
-            y = pos.y;
+            this.ctx.globalAlpha = 0.95;
+        } else if (inDock) {
+            // In dock: scale down for better fit
+            scale = DOCK_PIECE_SCALE;
             this.ctx.shadowColor = color;
             this.ctx.shadowBlur = 5;
-            this.ctx.globalAlpha = 0.8;
+            this.ctx.globalAlpha = 0.85;
+        } else {
+            // On board: normal
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = 5;
+            this.ctx.globalAlpha = 0.9;
+        }
+
+        // Apply scaling transform (centered on piece)
+        if (scale !== 1.0) {
+            const pieceWidth = (Math.max(...shape.map(b => b.x)) + 1) * this.gridSize;
+            const pieceHeight = (Math.max(...shape.map(b => b.y)) + 1) * this.gridSize;
+            const centerX = x + pieceWidth / 2;
+            const centerY = y + pieceHeight / 2;
+
+            this.ctx.translate(centerX, centerY);
+            this.ctx.scale(scale, scale);
+            this.ctx.translate(-centerX, -centerY);
         }
 
         this.ctx.fillStyle = color;

@@ -134,7 +134,7 @@ test.describe('Dock visibility', () => {
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
-        const MAX_VISIBLE_Y = 12;
+        const MAX_VISIBLE_Y = 14; // MAX_DOCK_Y (13) + 1 for piece height
 
         const piecePositions = await page.evaluate(() => {
             return window.game.pieces.map(p => ({
@@ -163,7 +163,7 @@ test.describe('Dock visibility', () => {
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
-        const MAX_VISIBLE_Y = 12;
+        const MAX_VISIBLE_Y = 14; // MAX_DOCK_Y (13) + 1 for piece height
 
         const piecePositions = await page.evaluate(() => {
             return window.game.pieces.map(p => ({

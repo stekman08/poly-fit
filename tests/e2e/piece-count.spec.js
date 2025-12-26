@@ -61,7 +61,7 @@ test.describe('Piece Count by Level', () => {
         expect(pieceCount).toBe(6);
     });
 
-    test('level 100 still has 6 pieces', async ({ page }) => {
+    test('level 100+ still has 6 pieces (grid max)', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('polyfit-max-level', '100');
@@ -72,6 +72,7 @@ test.describe('Piece Count by Level', () => {
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
+        // 6 pieces is max - 5x5 grid = 25 cells, 7 pieces would need ~28 blocks
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(6);
     });

@@ -10,6 +10,7 @@ import {
     LEVEL_3_PIECE_MAX,
     LEVEL_14_PIECE_MAX,
     LEVEL_49_PIECE_MAX,
+    LEVEL_99_PIECE_MAX,
     WIN_OVERLAY_DELAY,
     HINT_DELAY
 } from './config/constants.js';
@@ -92,7 +93,7 @@ function startLevel() {
     const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3
         : level <= LEVEL_14_PIECE_MAX ? 4
         : level <= LEVEL_49_PIECE_MAX ? 5
-        : 6;
+        : 6; // Max 6 pieces (5x5 grid = 25 cells, 7 pieces would need ~28 cells)
 
     try {
         const puzzleData = generatePuzzle(piecesCount);
@@ -103,11 +104,18 @@ function startLevel() {
         window.triggerCheckWin = () => onInteraction(true);
         window.__testForceHint = () => { lastInteractionTime = 0; };
 
+        // Sort pieces by height (tallest first) for better bin packing
+        const sortedPieces = [...game.pieces].sort((a, b) => {
+            const heightA = Math.max(...a.shape.map(bl => bl.y)) + 1;
+            const heightB = Math.max(...b.shape.map(bl => bl.y)) + 1;
+            return heightB - heightA;
+        });
+
         let currentX = 0;
         let currentY = DOCK_Y;
         let rowMaxHeight = 0;
 
-        game.pieces.forEach((p) => {
+        sortedPieces.forEach((p) => {
             const pieceWidth = Math.max(...p.shape.map(b => b.x)) + 1;
             const pieceHeight = Math.max(...p.shape.map(b => b.y)) + 1;
 
