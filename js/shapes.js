@@ -21,16 +21,23 @@ export function flipShape(shape) {
 
 // Normalize coordinates so the top-left-most block is at (0,0) (or closes to it)
 export function normalizeShape(shape) {
-    if (shape.length === 0) return [];
+    const len = shape.length;
+    if (len === 0) return [];
 
-    // Find min x and min y
-    const minX = Math.min(...shape.map(p => p.x));
-    const minY = Math.min(...shape.map(p => p.y));
+    // Find min x and min y in single pass
+    let minX = shape[0].x;
+    let minY = shape[0].y;
+    for (let i = 1; i < len; i++) {
+        if (shape[i].x < minX) minX = shape[i].x;
+        if (shape[i].y < minY) minY = shape[i].y;
+    }
 
-    return shape.map(p => ({
-        x: p.x - minX,
-        y: p.y - minY
-    }));
+    // Offset all coordinates
+    const result = new Array(len);
+    for (let i = 0; i < len; i++) {
+        result[i] = { x: shape[i].x - minX, y: shape[i].y - minY };
+    }
+    return result;
 }
 
 // Standard Polyominoes
