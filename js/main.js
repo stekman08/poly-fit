@@ -3,11 +3,13 @@ import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import { InputHandler } from './input.js';
 import { sounds } from './sounds.js';
+import { haptics } from './haptics.js';
 import {
     DOCK_Y,
     MAX_DOCK_Y,
     LEVEL_3_PIECE_MAX,
     LEVEL_14_PIECE_MAX,
+    LEVEL_49_PIECE_MAX,
     WIN_OVERLAY_DELAY,
     HINT_DELAY
 } from './config/constants.js';
@@ -20,10 +22,23 @@ const btnNewGame = document.getElementById('btn-new-game');
 const btnContinue = document.getElementById('btn-continue');
 const tutorialOverlay = document.getElementById('tutorial-overlay');
 const btnGotIt = document.getElementById('btn-got-it');
+const levelSelectScreen = document.getElementById('level-select-screen');
+const levelGrid = document.getElementById('level-grid');
+const btnLevelSelect = document.getElementById('btn-level-select');
+const btnBack = document.getElementById('btn-back');
 
 // Tutorial configuration
 const TUTORIAL_STORAGE_KEY = 'polyfit-tutorial-shown';
 const TUTORIAL_MAX_SHOWS = 3;
+
+// Color themes
+const THEMES = [
+    { name: 'cyan', primary: '#00ffff', secondary: '#00cccc' },
+    { name: 'magenta', primary: '#ff00ff', secondary: '#cc00cc' },
+    { name: 'green', primary: '#00ff00', secondary: '#00cc00' },
+    { name: 'orange', primary: '#ff8800', secondary: '#cc6600' }
+];
+const THEME_STORAGE_KEY = 'polyfit-theme';
 
 const renderer = new Renderer(canvas);
 let game = null;
@@ -32,6 +47,8 @@ let maxLevel = parseInt(localStorage.getItem('polyfit-max-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 let isWinning = false;
+let practiceMode = false; // When true, return to start screen after win
+let currentThemeIndex = 0;
 
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {
@@ -72,7 +89,10 @@ function loop() {
 }
 
 function startLevel() {
-    const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3 : level <= LEVEL_14_PIECE_MAX ? 4 : 5;
+    const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3
+        : level <= LEVEL_14_PIECE_MAX ? 4
+        : level <= LEVEL_49_PIECE_MAX ? 5
+        : 6;
 
     try {
         const puzzleData = generatePuzzle(piecesCount);
@@ -137,16 +157,24 @@ function onInteraction(checkWin = false) {
     if (checkWin && game && !isWinning && game.checkWin()) {
         isWinning = true;
         sounds.playWin();
+        haptics.vibrateWin();
         renderer.triggerWinEffect();
         setTimeout(() => {
             winOverlay.classList.remove('hidden');
             setTimeout(() => {
-                level++;
-                if (level > maxLevel) {
-                    maxLevel = level;
-                    localStorage.setItem('polyfit-max-level', maxLevel);
+                if (practiceMode) {
+                    // Practice mode: return to start screen
+                    practiceMode = false;
+                    showStartScreen();
+                } else {
+                    // Normal mode: advance to next level
+                    level++;
+                    if (level > maxLevel) {
+                        maxLevel = level;
+                        localStorage.setItem('polyfit-max-level', maxLevel);
+                    }
+                    startLevel();
                 }
-                startLevel();
             }, 1500);
         }, WIN_OVERLAY_DELAY);
     }
@@ -172,14 +200,80 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+function applyTheme(theme) {
+    document.documentElement.style.setProperty('--neon-blue', theme.primary);
+    // Update button borders and text shadows that use the theme color
+}
+
+function cycleTheme() {
+    currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
+    const theme = THEMES[currentThemeIndex];
+    applyTheme(theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme.name);
+    haptics.vibrateRotate(); // Subtle feedback
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme) {
+        const index = THEMES.findIndex(t => t.name === savedTheme);
+        if (index !== -1) {
+            currentThemeIndex = index;
+            applyTheme(THEMES[index]);
+        }
+    }
+}
+
 function showStartScreen() {
     if (maxLevel > 1) {
         btnContinue.textContent = `Continue (Level ${maxLevel})`;
         btnContinue.classList.remove('hidden');
+        btnLevelSelect.classList.remove('hidden');
     } else {
         btnContinue.classList.add('hidden');
+        btnLevelSelect.classList.add('hidden');
     }
     startScreen.classList.remove('hidden');
+    winOverlay.classList.add('hidden');
+}
+
+function showLevelSelect() {
+    buildLevelGrid();
+    startScreen.classList.add('hidden');
+    levelSelectScreen.classList.remove('hidden');
+}
+
+function hideLevelSelect() {
+    levelSelectScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+}
+
+function buildLevelGrid() {
+    levelGrid.innerHTML = '';
+    // Show up to maxLevel + some locked levels for preview
+    const showLevels = Math.min(maxLevel + 10, 100);
+
+    for (let i = 1; i <= showLevels; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'level-btn';
+        btn.textContent = i;
+
+        if (i > maxLevel) {
+            btn.classList.add('locked');
+        } else {
+            btn.addEventListener('click', () => selectLevel(i));
+        }
+
+        levelGrid.appendChild(btn);
+    }
+}
+
+function selectLevel(selectedLevel) {
+    level = selectedLevel;
+    practiceMode = true;
+    levelSelectScreen.classList.add('hidden');
+    // Skip tutorial in practice mode
+    startLevel();
 }
 
 btnNewGame.addEventListener('click', () => {
@@ -201,5 +295,16 @@ btnContinue.addEventListener('click', () => {
 
 btnGotIt.addEventListener('click', hideTutorial);
 
+btnLevelSelect.addEventListener('click', showLevelSelect);
+btnBack.addEventListener('click', hideLevelSelect);
+
+// Title tap to cycle themes
+const startTitle = document.querySelector('.start-modal .neon-text');
+if (startTitle) {
+    startTitle.style.cursor = 'pointer';
+    startTitle.addEventListener('click', cycleTheme);
+}
+
+loadTheme();
 showStartScreen();
 loop();

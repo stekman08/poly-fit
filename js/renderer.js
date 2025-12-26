@@ -16,6 +16,9 @@ export class Renderer {
         // Effects
         this.confetti = new ConfettiSystem();
 
+        // Ghost preview for dragging
+        this.ghostPreview = null;
+
         // Resize observer
         window.addEventListener('resize', () => this.resize());
         this.resize();
@@ -81,6 +84,11 @@ export class Renderer {
             this.drawHint(this.hintData);
         }
 
+        // Draw ghost preview if dragging
+        if (this.ghostPreview) {
+            this.drawGhostPreview(this.ghostPreview);
+        }
+
         game.pieces.forEach(p => this.drawPiece(p));
 
         // Update and draw effects
@@ -94,6 +102,14 @@ export class Renderer {
 
     hideHint() {
         this.hintData = null;
+    }
+
+    setGhostPreview(shape, x, y, color) {
+        this.ghostPreview = { shape, x, y, color };
+    }
+
+    clearGhostPreview() {
+        this.ghostPreview = null;
     }
 
     drawHint(hint) {
@@ -113,6 +129,27 @@ export class Renderer {
             const pos = this.gridToPixel(x + block.x, y + block.y);
             const margin = 4;
             const size = this.gridSize - (margin * 2);
+            this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
+        });
+
+        this.ctx.restore();
+    }
+
+    drawGhostPreview(ghost) {
+        const { x, y, shape, color } = ghost;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.25;
+        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([4, 4]);
+
+        shape.forEach(block => {
+            const pos = this.gridToPixel(x + block.x, y + block.y);
+            const margin = 4;
+            const size = this.gridSize - (margin * 2);
+            this.ctx.fillRect(pos.x + margin, pos.y + margin, size, size);
             this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
         });
 
