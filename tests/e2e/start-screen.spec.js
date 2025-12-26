@@ -9,10 +9,11 @@ test.describe('Start Screen', () => {
 
     test('New Game button starts at level 1', async ({ page }) => {
         await page.goto('/');
-        // Skip tutorial in tests
-        await page.evaluate(() => localStorage.setItem('polyfit-tutorial-shown', '3'));
         await page.click('#btn-new-game');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // New Game always shows tutorial - dismiss it
+        await page.click('#btn-got-it');
+        await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
 
         const levelText = await page.locator('#level-display').textContent();
         expect(levelText).toContain('LEVEL 1');

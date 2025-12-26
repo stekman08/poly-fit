@@ -50,7 +50,7 @@ test.describe('Tutorial', () => {
         expect(gameExists).toBe(true);
     });
 
-    test('tutorial shows exactly 3 times', async ({ page }) => {
+    test('New Game always shows tutorial', async ({ page }) => {
         // First time
         await page.waitForSelector('#start-screen');
         await page.click('#btn-new-game');
@@ -58,10 +58,44 @@ test.describe('Tutorial', () => {
         await expect(tutorial).not.toHaveClass(/hidden/);
         await page.click('#btn-got-it');
 
-        // Second time
+        // Second time - still shows
         await page.reload();
         await page.waitForSelector('#start-screen');
         await page.click('#btn-new-game');
+        tutorial = page.locator('#tutorial-overlay');
+        await expect(tutorial).not.toHaveClass(/hidden/);
+        await page.click('#btn-got-it');
+
+        // Fifth time - still shows (always shows on New Game)
+        for (let i = 0; i < 3; i++) {
+            await page.reload();
+            await page.waitForSelector('#start-screen');
+            await page.click('#btn-new-game');
+            await page.click('#btn-got-it');
+        }
+        await page.reload();
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-new-game');
+        tutorial = page.locator('#tutorial-overlay');
+        await expect(tutorial).not.toHaveClass(/hidden/);
+    });
+
+    test('Continue shows tutorial only 3 times', async ({ page }) => {
+        // Set up saved level for Continue button
+        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '5'));
+        await page.reload();
+
+        // First time
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-continue');
+        let tutorial = page.locator('#tutorial-overlay');
+        await expect(tutorial).not.toHaveClass(/hidden/);
+        await page.click('#btn-got-it');
+
+        // Second time
+        await page.reload();
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-continue');
         tutorial = page.locator('#tutorial-overlay');
         await expect(tutorial).not.toHaveClass(/hidden/);
         await page.click('#btn-got-it');
@@ -69,22 +103,25 @@ test.describe('Tutorial', () => {
         // Third time
         await page.reload();
         await page.waitForSelector('#start-screen');
-        await page.click('#btn-new-game');
+        await page.click('#btn-continue');
         tutorial = page.locator('#tutorial-overlay');
         await expect(tutorial).not.toHaveClass(/hidden/);
         await page.click('#btn-got-it');
 
-        // Fourth time - should NOT show
+        // Fourth time - should NOT show on Continue
         await page.reload();
         await page.waitForSelector('#start-screen');
-        await page.click('#btn-new-game');
+        await page.click('#btn-continue');
         tutorial = page.locator('#tutorial-overlay');
         await expect(tutorial).toHaveClass(/hidden/);
     });
 
-    test('tutorial counter persists in localStorage', async ({ page }) => {
+    test('Continue increments tutorial counter in localStorage', async ({ page }) => {
+        // Set up saved level for Continue button
+        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '5'));
+        await page.reload();
         await page.waitForSelector('#start-screen');
-        await page.click('#btn-new-game');
+        await page.click('#btn-continue');
         await page.click('#btn-got-it');
 
         const count = await page.evaluate(() =>
@@ -93,16 +130,14 @@ test.describe('Tutorial', () => {
         expect(count).toBe(1);
     });
 
-    test('tutorial shows on Continue as well', async ({ page }) => {
-        // Set up a saved level
-        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '5'));
-        await page.reload();
+    test('New Game does not increment tutorial counter', async ({ page }) => {
         await page.waitForSelector('#start-screen');
+        await page.click('#btn-new-game');
+        await page.click('#btn-got-it');
 
-        await page.click('#btn-continue');
-
-        // Tutorial should be visible
-        const tutorial = page.locator('#tutorial-overlay');
-        await expect(tutorial).not.toHaveClass(/hidden/);
+        const count = await page.evaluate(() =>
+            parseInt(localStorage.getItem('polyfit-tutorial-shown') || '0', 10)
+        );
+        expect(count).toBe(0);
     });
 });

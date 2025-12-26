@@ -2,11 +2,12 @@ import { test, expect } from '@playwright/test';
 
 async function startGame(page) {
     await page.goto('/');
-    // Skip tutorial in tests
-    await page.evaluate(() => localStorage.setItem('polyfit-tutorial-shown', '3'));
     await page.waitForSelector('#start-screen');
     await page.click('#btn-new-game');
     await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+    // New Game always shows tutorial - dismiss it
+    await page.click('#btn-got-it');
+    await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
 }
 
 test('snap logic validation', async ({ page }) => {
