@@ -6,7 +6,9 @@ import {
     TAP_MAX_DURATION,
     SWIPE_MIN_DISTANCE,
     SWIPE_MAX_DURATION,
-    TOUCH_LIFT_OFFSET
+    TOUCH_LIFT_OFFSET,
+    DOCK_Y,
+    MAX_DOCK_Y
 } from './config/constants.js';
 
 export class InputHandler {
@@ -79,6 +81,56 @@ export class InputHandler {
         return null;
     }
 
+    // Find nearest available dock position for a piece
+    findNearestDockPosition(piece, targetX, targetY) {
+        const shape = piece.currentShape;
+        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
+        const pieceH = Math.max(...shape.map(p => p.y)) + 1;
+
+        // Get other pieces in dock (excluding this one)
+        const otherDockPieces = this.game.pieces.filter(p =>
+            p !== piece && p.y >= DOCK_Y
+        );
+
+        // Build occupancy grid for dock area
+        const dockOccupied = new Set();
+        otherDockPieces.forEach(p => {
+            p.currentShape.forEach(block => {
+                const key = `${Math.round(p.x + block.x)},${Math.round(p.y + block.y)}`;
+                dockOccupied.add(key);
+            });
+        });
+
+        // Check if a position is valid for this piece
+        const canPlace = (x, y) => {
+            // Bounds check
+            if (x < 0 || x + pieceW > 5) return false;
+            if (y < DOCK_Y || y + pieceH > MAX_DOCK_Y + 1) return false;
+
+            // Collision check
+            for (const block of shape) {
+                const key = `${x + block.x},${y + block.y}`;
+                if (dockOccupied.has(key)) return false;
+            }
+            return true;
+        };
+
+        // Try positions in order of distance from target
+        const candidates = [];
+        for (let y = DOCK_Y; y <= MAX_DOCK_Y - pieceH + 1; y++) {
+            for (let x = 0; x <= 5 - pieceW; x++) {
+                if (canPlace(x, y)) {
+                    const dist = Math.hypot(x - targetX, y - targetY);
+                    candidates.push({ x, y, dist });
+                }
+            }
+        }
+
+        // Sort by distance and return nearest
+        candidates.sort((a, b) => a.dist - b.dist);
+        return candidates.length > 0 ? candidates[0] : { x: 0, y: DOCK_Y };
+    }
+
     // Snap piece to valid position (extracted for reuse)
     snapPiece(piece) {
         let snappedX = Math.round(piece.x);
@@ -94,8 +146,10 @@ export class InputHandler {
         const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
 
         if (!isValid) {
-            snappedX = piece.dockX;
-            snappedY = piece.dockY;
+            // Find nearest available dock position
+            const dockPos = this.findNearestDockPosition(piece, snappedX, snappedY);
+            snappedX = dockPos.x;
+            snappedY = dockPos.y;
         }
 
         this.game.updatePieceState(piece.id, {
@@ -245,11 +299,12 @@ export class InputHandler {
         const otherPieces = this.game.pieces.filter(p => p !== this.draggingPiece);
         const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
 
-        if (!isValid) {
-            // Revert to Dock
-            snappedX = this.draggingPiece.dockX;
-            snappedY = this.draggingPiece.dockY;
-        } else if (snappedY < rows) {
+        if (!isValid || snappedY >= rows) {
+            // Invalid placement or dropped in dock area - find nearest dock position
+            const dockPos = this.findNearestDockPosition(this.draggingPiece, snappedX, snappedY);
+            snappedX = dockPos.x;
+            snappedY = dockPos.y;
+        } else {
             // Valid placement on the board - play snap sound & haptic
             sounds.playSnap();
             haptics.vibrateSnap();

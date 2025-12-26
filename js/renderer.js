@@ -1,6 +1,6 @@
 import { COLORS } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
-import { DOCK_Y, DOCK_PIECE_SCALE } from './config/constants.js';
+import { DOCK_Y, DOCK_PIECE_SCALE, GHOST_ALPHA } from './config/constants.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -146,7 +146,7 @@ export class Renderer {
         const { x, y, shape, color } = ghost;
 
         this.ctx.save();
-        this.ctx.globalAlpha = 0.25;
+        this.ctx.globalAlpha = GHOST_ALPHA;
         this.ctx.fillStyle = color;
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = 2;
@@ -210,6 +210,7 @@ export class Renderer {
         const shape = piece.currentShape;
         const color = piece.color || COLORS[0];
         const inDock = piece.y >= DOCK_Y;
+        const onBoard = !inDock && !isDragging;
 
         this.ctx.save();
 
@@ -218,25 +219,28 @@ export class Renderer {
         let y = pos.y;
 
         // Determine scale and effects based on state
+        // Pieces are small (50%) in dock AND while dragging
+        // Only full size when placed on board
         let scale = 1.0;
 
-        if (isDragging) {
-            // Dragging: slight scale up, strong glow
-            scale = 1.1;
+        if (onBoard) {
+            // On board: full size
+            scale = 1.0;
             this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 20;
+            this.ctx.shadowBlur = 5;
+            this.ctx.globalAlpha = 0.9;
+        } else if (isDragging) {
+            // Dragging: stay small, strong glow
+            scale = DOCK_PIECE_SCALE;
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = 15;
             this.ctx.globalAlpha = 0.95;
-        } else if (inDock) {
-            // In dock: scale down for better fit
+        } else {
+            // In dock (not dragging): small
             scale = DOCK_PIECE_SCALE;
             this.ctx.shadowColor = color;
             this.ctx.shadowBlur = 5;
             this.ctx.globalAlpha = 0.85;
-        } else {
-            // On board: normal
-            this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 5;
-            this.ctx.globalAlpha = 0.9;
         }
 
         // Apply scaling transform (centered on piece)
