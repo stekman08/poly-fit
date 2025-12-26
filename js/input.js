@@ -112,6 +112,7 @@ export class InputHandler {
             this.snapPiece(this.draggingPiece);
             this.draggingPiece = null;
             this.activeTouchId = null;
+            this.renderer.draggingPieceId = null;
         }
 
         const pos = this.getCanvasCoords(input);
@@ -135,6 +136,7 @@ export class InputHandler {
             if (hit) {
                 this.draggingPiece = p;
                 this.activeTouchId = touchId; // Track which touch is dragging
+                this.renderer.draggingPieceId = p.id; // Tell renderer which piece is dragging
 
                 // Set offsets
                 this.dragOffset = {
@@ -261,6 +263,7 @@ export class InputHandler {
         this.draggingPiece = null;
         this.activeTouchId = null;
         this.visualDragOffset = 0;
+        this.renderer.draggingPieceId = null; // Clear dragging state in renderer
         this.onInteraction(true); // true = check win
     }
 
