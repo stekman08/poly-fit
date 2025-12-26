@@ -1,6 +1,37 @@
 import { describe, it, expect } from 'vitest';
 import { isValidPlacement } from '../../js/validation.js';
 
+describe('isValidPlacement - overlap detection', () => {
+    const grid5x5 = [
+        [1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1],
+    ];
+
+    const square = [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+    ];
+
+    const otherPieces = [
+        { x: 0, y: 0, currentShape: square }
+    ];
+
+    it('rejects placement that overlaps another piece', () => {
+        const result = isValidPlacement(square, 1, 0, grid5x5, otherPieces);
+        expect(result).toBe(false);
+    });
+
+    it('accepts placement that does not overlap', () => {
+        const result = isValidPlacement(square, 3, 0, grid5x5, otherPieces);
+        expect(result).toBe(true);
+    });
+});
+
 describe('isValidPlacement', () => {
     const grid5x5 = [
         [1, 1, 1, 1, 1],

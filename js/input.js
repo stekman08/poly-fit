@@ -157,7 +157,8 @@ export class InputHandler {
 
         const grid = this.game.targetGrid;
         const rows = grid.length;
-        const isValid = isValidPlacement(shape, snappedX, snappedY, grid);
+        const otherPieces = this.game.pieces.filter(p => p !== this.draggingPiece);
+        const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
 
         if (!isValid) {
             // Revert to Dock
