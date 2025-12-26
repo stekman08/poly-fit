@@ -306,6 +306,7 @@ body {
 #tutorial-overlay.hidden {
     opacity: 0;
     pointer-events: none;
+    visibility: hidden; /* Ensures children also can't receive events */
 }
 
 .tutorial-content {
