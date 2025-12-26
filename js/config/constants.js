@@ -20,7 +20,8 @@ export const TOUCH_LIFT_OFFSET = 100;    // pixels - lift piece above finger
 // Difficulty scaling
 export const LEVEL_3_PIECE_MAX = 3;      // levels 1-3: 3 pieces
 export const LEVEL_14_PIECE_MAX = 14;    // levels 4-14: 4 pieces
-// Level 15+: 5 pieces
+export const LEVEL_49_PIECE_MAX = 49;    // levels 15-49: 5 pieces
+// Level 50+: 6 pieces
 
 // Timing
 export const WIN_OVERLAY_DELAY = 300;    // ms - delay before showing win overlay

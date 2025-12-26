@@ -1,4 +1,5 @@
 import { sounds } from './sounds.js';
+import { haptics } from './haptics.js';
 import { isValidPlacement } from './validation.js';
 import {
     TAP_MAX_DISTANCE,
@@ -170,16 +171,47 @@ export class InputHandler {
         const gridPos = this.renderer.pixelToGrid(pos.x, targetScreenY);
 
         // Update piece position (Fractional is fine during drag)
+        const newX = gridPos.x - this.dragOffset.x;
+        const newY = gridPos.y - this.dragOffset.y;
         this.game.updatePieceState(this.draggingPiece.id, {
-            x: gridPos.x - this.dragOffset.x,
-            y: gridPos.y - this.dragOffset.y
+            x: newX,
+            y: newY
         });
+
+        // Calculate and show ghost preview at snap position
+        this.updateGhostPreview(this.draggingPiece, newX, newY);
 
         this.onInteraction();
     }
 
+    updateGhostPreview(piece, currentX, currentY) {
+        const shape = piece.currentShape;
+        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
+
+        // Calculate snap position
+        let snapX = Math.round(currentX);
+        let snapY = Math.round(currentY);
+        snapX = Math.max(0, Math.min(snapX, 5 - pieceW));
+        snapY = Math.max(0, snapY);
+
+        const grid = this.game.targetGrid;
+        const rows = grid.length;
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        const isValid = isValidPlacement(shape, snapX, snapY, grid, otherPieces);
+
+        // Only show ghost if valid placement on board (not dock)
+        if (isValid && snapY < rows) {
+            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color);
+        } else {
+            this.renderer.clearGhostPreview();
+        }
+    }
+
     handleEnd(e) {
         if (!this.draggingPiece) return;
+
+        // Clear ghost preview
+        this.renderer.clearGhostPreview();
 
         const now = Date.now();
         const pos = this.getCanvasCoords(e.changedTouches ? e.changedTouches[0] : e);
@@ -216,8 +248,9 @@ export class InputHandler {
             snappedX = this.draggingPiece.dockX;
             snappedY = this.draggingPiece.dockY;
         } else if (snappedY < rows) {
-            // Valid placement on the board - play snap sound
+            // Valid placement on the board - play snap sound & haptic
             sounds.playSnap();
+            haptics.vibrateSnap();
         }
 
         this.game.updatePieceState(this.draggingPiece.id, {
@@ -235,12 +268,14 @@ export class InputHandler {
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
         sounds.playRotate();
+        haptics.vibrateRotate();
         this.onInteraction();
     }
 
     handleFlip(piece) {
         this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
         sounds.playFlip();
+        haptics.vibrateFlip();
         this.onInteraction();
     }
 }

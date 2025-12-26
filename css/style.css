@@ -282,8 +282,89 @@ body {
     min-width: 220px;
 }
 
-#btn-continue.hidden {
+#btn-continue.hidden,
+#btn-level-select.hidden {
     display: none;
+}
+
+.glass-btn.secondary {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.7);
+    box-shadow: none;
+}
+
+.glass-btn.secondary:active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Level Select Screen */
+#level-select-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    z-index: 200;
+}
+
+#level-select-screen.hidden {
+    display: none;
+}
+
+.level-select-modal {
+    text-align: center;
+    padding: 30px;
+    max-width: 340px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.level-select-modal h2 {
+    font-size: 1.5rem;
+    margin-bottom: 25px;
+}
+
+#level-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.level-btn {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    font-family: var(--font-main);
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    pointer-events: auto;
+}
+
+.level-btn:active {
+    background: var(--neon-blue);
+    color: #000;
+}
+
+.level-btn.locked {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.3);
+    cursor: not-allowed;
+}
+
+.level-btn.locked:active {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.3);
 }
 
 /* Tutorial Overlay */
