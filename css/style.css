@@ -177,7 +177,7 @@ body {
     margin-bottom: 30px;
 }
 
-/* Version Info */
+/* Version Info (in start screen, bottom-right) */
 .version-info {
     position: absolute;
     bottom: max(12px, var(--sab));
