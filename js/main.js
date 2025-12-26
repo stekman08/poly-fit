@@ -173,6 +173,19 @@ function onInteraction(checkWin = false) {
                     if (level > maxLevel) {
                         maxLevel = level;
                         localStorage.setItem('polyfit-max-level', maxLevel);
+
+                        // Track new max level in analytics
+                        try {
+                            if (window.goatcounter && window.goatcounter.count) {
+                                window.goatcounter.count({
+                                    path: '/event/maxlevel/' + maxLevel,
+                                    title: 'Max Level: ' + maxLevel,
+                                    event: true
+                                });
+                            }
+                        } catch (e) {
+                            // Analytics error should not break the game
+                        }
                     }
                     startLevel();
                 }
