@@ -101,6 +101,7 @@ function startLevel() {
         window.getLevel = () => level;
         window.isWinning = () => isWinning;
         window.triggerCheckWin = () => onInteraction(true);
+        window.__testForceHint = () => { lastInteractionTime = 0; };
 
         let currentX = 0;
         let currentY = DOCK_Y;
