@@ -28,7 +28,7 @@ test.describe('Tutorial', () => {
         // Check content
         await expect(page.locator('.tutorial-text strong').nth(0)).toContainText('DRAG');
         await expect(page.locator('.tutorial-text strong').nth(1)).toContainText('TAP');
-        await expect(page.locator('.tutorial-text strong').nth(2)).toContainText('SWIPE');
+        await expect(page.locator('.tutorial-text strong').nth(2)).toContainText('QUICK SWIPE');
     });
 
     test('clicking GOT IT dismisses tutorial and starts game', async ({ page }) => {
