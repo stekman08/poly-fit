@@ -27,4 +27,4 @@ export const LEVEL_99_PIECE_MAX = 99;    // levels 50-99: 6 pieces
 
 // Timing
 export const WIN_OVERLAY_DELAY = 300;    // ms - delay before showing win overlay
-export const HINT_DELAY = 60000;         // ms - show hint after 1 minute inactivity
+export const HINT_DELAY = 300000;        // ms - show hint after 5 minutes inactivity
