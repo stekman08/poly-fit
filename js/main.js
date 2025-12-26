@@ -21,10 +21,8 @@ let level = parseInt(localStorage.getItem('polyfit-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 
-// Loop
 function loop() {
     if (game) {
-        // Check for hint trigger
         if (!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) {
             const hint = game.getHint();
             if (hint) {
@@ -39,16 +37,13 @@ function loop() {
 }
 
 function startLevel() {
-    // Difficulty scaling: more pieces at higher levels
     const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3 : level <= LEVEL_14_PIECE_MAX ? 4 : 5;
 
-    // Retry generation until success (handled inside, throws if fails)
     try {
         const puzzleData = generatePuzzle(piecesCount);
         game = new Game(puzzleData);
-        window.game = game; // Expose for testing
+        window.game = game;
 
-        // Position pieces in dock area in rows
         let currentX = 0;
         let currentY = DOCK_Y;
 
@@ -56,10 +51,9 @@ function startLevel() {
             const pieceWidth = Math.max(...p.shape.map(b => b.x)) + 1;
             const pieceHeight = Math.max(...p.shape.map(b => b.y)) + 1;
 
-            // If piece doesn't fit on current row, move to next row
             if (currentX + pieceWidth > 5) {
                 currentX = 0;
-                currentY += 3; // Move down by max piece height
+                currentY += 3;
             }
 
             game.updatePieceState(p.id, {
@@ -74,8 +68,8 @@ function startLevel() {
         });
 
     } catch (e) {
-        console.error("Generaiton failed", e);
-        startLevel(); // Try again (dumb retry)
+        console.error("Generation failed", e);
+        startLevel();
         return;
     }
 
@@ -87,33 +81,27 @@ function startLevel() {
     levelDisplay.innerText = `LEVEL ${level}`;
 }
 
-// Check Win Handler
 function onInteraction(checkWin = false) {
-    // Reset hint on any interaction
     lastInteractionTime = Date.now();
     if (hintShown) {
         renderer.hideHint();
         hintShown = false;
     }
 
-    if (checkWin && game) {
-        if (game.checkWin()) {
-            sounds.playWin();
-            renderer.triggerWinEffect();
+    if (checkWin && game && game.checkWin()) {
+        sounds.playWin();
+        renderer.triggerWinEffect();
+        setTimeout(() => {
+            winOverlay.classList.remove('hidden');
             setTimeout(() => {
-                winOverlay.classList.remove('hidden');
-                // Auto-advance after showing message
-                setTimeout(() => {
-                    level++;
-                    localStorage.setItem('polyfit-level', level);
-                    startLevel();
-                }, 1500);
-            }, WIN_OVERLAY_DELAY);
-        }
+                level++;
+                localStorage.setItem('polyfit-level', level);
+                startLevel();
+            }, 1500);
+        }, WIN_OVERLAY_DELAY);
     }
 }
 
-// Input setup
 new InputHandler(
     {
         get pieces() { return game ? game.pieces : []; },
@@ -124,7 +112,6 @@ new InputHandler(
     onInteraction
 );
 
-// Reset hint timer when app resumes (PWA returning from background)
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         lastInteractionTime = Date.now();
@@ -135,6 +122,5 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Start
 startLevel();
 loop();
