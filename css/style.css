@@ -242,3 +242,46 @@ body {
     font-size: 0.9rem;
     color: #666;
 }
+
+/* Start Screen */
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    z-index: 200;
+}
+
+#start-screen.hidden {
+    display: none;
+}
+
+.start-modal {
+    text-align: center;
+    padding: 40px;
+}
+
+.start-modal .neon-text {
+    font-size: 3rem;
+    margin-bottom: 50px;
+}
+
+.start-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.start-buttons .glass-btn {
+    min-width: 220px;
+}
+
+#btn-continue.hidden {
+    display: none;
+}
