@@ -1,4 +1,5 @@
 import { sounds } from './sounds.js';
+import { isValidPlacement } from './validation.js';
 import {
     TAP_MAX_DISTANCE,
     TAP_MAX_DURATION,
@@ -154,31 +155,9 @@ export class InputHandler {
         snappedX = Math.max(0, Math.min(snappedX, 5 - pieceW));
         snappedY = Math.max(0, snappedY);
 
-        // Validation: Piece must be ENTIRELY on valid target spots (1s in grid)
-        // OR entirely in dock area (below grid). No partial placements allowed.
-        let isValid = true;
         const grid = this.game.targetGrid;
         const rows = grid.length;
-        const cols = grid[0].length;
-
-        for (const block of shape) {
-            const bx = snappedX + block.x;
-            const by = snappedY + block.y;
-
-            // Check if block is inside the board area
-            if (by >= 0 && by < rows && bx >= 0 && bx < cols) {
-                // Inside board - must be on a target spot (1)
-                if (grid[by][bx] !== 1) {
-                    isValid = false;
-                    break;
-                }
-            } else if (by < rows) {
-                // Block is horizontally outside board but vertically inside - invalid
-                isValid = false;
-                break;
-            }
-            // If by >= rows (dock area), that's allowed - piece stays in dock
-        }
+        const isValid = isValidPlacement(shape, snappedX, snappedY, grid);
 
         if (!isValid) {
             // Revert to Dock
