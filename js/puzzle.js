@@ -39,88 +39,110 @@ function getRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// Shuffle array in place (Fisher-Yates)
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+// Check if shape at position is adjacent to existing pieces
+function isAdjacentToExisting(grid, shape, x, y) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    for (const block of shape) {
+        const bx = x + block.x;
+        const by = y + block.y;
+        // Check all 4 neighbors
+        if (by > 0 && grid[by - 1][bx] === 1) return true;
+        if (by < rows - 1 && grid[by + 1][bx] === 1) return true;
+        if (bx > 0 && grid[by][bx - 1] === 1) return true;
+        if (bx < cols - 1 && grid[by][bx + 1] === 1) return true;
+    }
+    return false;
+}
+
+// Find all valid placements for a shape on the grid
+function findValidPlacements(grid, shape, requireAdjacent) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const placements = [];
+
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            if (canPlacePiece(grid, shape, x, y)) {
+                if (!requireAdjacent || isAdjacentToExisting(grid, shape, x, y)) {
+                    placements.push({ x, y });
+                }
+            }
+        }
+    }
+    return placements;
+}
+
 // Generate a solvable puzzle
 export function generatePuzzle(numPieces = 3) {
-    const MAX_RETRIES = 100;
+    const MAX_RETRIES = 200;
     let retries = 0;
-    // Keys of SHAPES object
     const shapeKeys = Object.keys(SHAPES);
 
     while (retries < MAX_RETRIES) {
-        const grid = createGrid(5, 5); // 5x5 area for constructing the target shape
+        const grid = createGrid(5, 5);
         const pieces = [];
         let success = true;
 
+        // Shuffle shape order for variety
+        const shuffledShapeKeys = shuffleArray([...shapeKeys]);
+
         for (let i = 0; i < numPieces; i++) {
-            // 1. Pick a random shape
-            const shapeName = getRandom(shapeKeys);
-            let shape = SHAPES[shapeName];
+            // Pick shape (cycle through shuffled list for variety)
+            const shapeName = shuffledShapeKeys[i % shuffledShapeKeys.length];
+            const baseShape = SHAPES[shapeName];
 
-            // 2. Randomize flip (50% chance)
-            const flipped = Math.random() < 0.5;
-            if (flipped) shape = flipShape(shape);
+            // Try all 8 orientations (4 rotations × 2 flip states)
+            const orientations = [];
+            for (let flip = 0; flip < 2; flip++) {
+                for (let rot = 0; rot < 4; rot++) {
+                    let shape = baseShape;
+                    if (flip === 1) shape = flipShape(shape);
+                    for (let r = 0; r < rot; r++) shape = rotateShape(shape);
+                    shape = normalizeShape(shape);
+                    orientations.push({ shape, rotations: rot, flipped: flip === 1 });
+                }
+            }
+            shuffleArray(orientations);
 
-            // 3. Randomize rotation (0, 90, 180, 270)
-            const rotations = Math.floor(Math.random() * 4);
-            for (let r = 0; r < rotations; r++) shape = rotateShape(shape);
-            // Normalize after rotation to ensure it's tight to 0,0
-            shape = normalizeShape(shape);
-
-            // 3. Try to place it
             let placed = false;
 
-            // Optimization: If i > 0, we SHOULD try to be adjacent to existing pieces.
-            // But checking every adjacency is complex. simpler:
-            // Randomly pick a spot, check if it FITS (no collision) AND if it TOUCHES existing (i>0).
+            // Try each orientation until we find one that fits
+            for (const orient of orientations) {
+                const placements = findValidPlacements(grid, orient.shape, i > 0);
 
-            for (let attempt = 0; attempt < 50; attempt++) {
-                const x = Math.floor(Math.random() * 5);
-                const y = Math.floor(Math.random() * 5);
-
-                if (canPlacePiece(grid, shape, x, y)) {
-                    // Contiguity check:
-                    let isContiguous = false;
-                    if (i === 0) {
-                        isContiguous = true; // First piece always OK
-                    } else {
-                        // Check if any block of current shape is adjacent to a '1' in grid
-                        for (const block of shape) {
-                            const bx = x + block.x;
-                            const by = y + block.y;
-                            // Check neighbors
-                            if ((grid[by - 1] && grid[by - 1][bx] === 1) ||
-                                (grid[by + 1] && grid[by + 1][bx] === 1) ||
-                                (grid[by][bx - 1] === 1) ||
-                                (grid[by][bx + 1] === 1)) {
-                                isContiguous = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (isContiguous) {
-                        placePiece(grid, shape, x, y, 1);
-                        pieces.push({
-                            id: i,
-                            shapeName,
-                            originalShape: SHAPES[shapeName],
-                            color: COLORS[i % COLORS.length],
-                            shape: shape,
-                            // Store solution for verification
-                            solutionX: x,
-                            solutionY: y,
-                            solutionRotation: rotations,
-                            solutionFlipped: flipped
-                        });
-                        placed = true;
-                        break;
-                    }
+                if (placements.length > 0) {
+                    // Pick random valid placement
+                    const pos = getRandom(placements);
+                    placePiece(grid, orient.shape, pos.x, pos.y, 1);
+                    pieces.push({
+                        id: i,
+                        shapeName,
+                        originalShape: baseShape,
+                        color: COLORS[i % COLORS.length],
+                        shape: orient.shape,
+                        solutionX: pos.x,
+                        solutionY: pos.y,
+                        solutionRotation: orient.rotations,
+                        solutionFlipped: orient.flipped
+                    });
+                    placed = true;
+                    break;
                 }
             }
 
             if (!placed) {
                 success = false;
-                break; // Restart generation
+                break;
             }
         }
 

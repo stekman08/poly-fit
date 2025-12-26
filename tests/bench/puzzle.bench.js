@@ -11,10 +11,9 @@ describe('Puzzle Generation Performance', () => {
         generatePuzzle(4);
     });
 
-    // Note: 5 pieces on 5x5 grid often fails - algorithm limitation
-    // bench('generatePuzzle (5 pieces)', () => {
-    //     generatePuzzle(5);
-    // });
+    bench('generatePuzzle (5 pieces)', () => {
+        generatePuzzle(5);
+    });
 
     bench('10 puzzles in sequence', () => {
         for (let i = 0; i < 10; i++) {
