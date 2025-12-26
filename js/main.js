@@ -124,6 +124,17 @@ new InputHandler(
     onInteraction
 );
 
+// Reset hint timer when app resumes (PWA returning from background)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        lastInteractionTime = Date.now();
+        if (hintShown) {
+            renderer.hideHint();
+            hintShown = false;
+        }
+    }
+});
+
 // Start
 startLevel();
 loop();
