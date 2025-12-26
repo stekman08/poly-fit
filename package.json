@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "prepare": "husky",
     "version": "node scripts/generate-version.js",
     "prestart": "npm run version",
     "start": "serve -l 3001",
@@ -14,6 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:ui": "vitest --ui",
+    "bench": "vitest bench",
     "coverage:merge": "node scripts/merge-coverage.js",
     "coverage:report": "nyc report --reporter=text --reporter=html --temp-dir=coverage/merged",
     "test:coverage:all": "npm run test:coverage && npm run test:e2e && npm run coverage:merge && npm run coverage:report"
@@ -23,13 +25,14 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
+    "@vitest/coverage-v8": "4.0.16",
+    "@vitest/ui": "4.0.16",
     "canvas": "^3.2.0",
     "happy-dom": "^20.0.10",
+    "husky": "^9.1.7",
     "nyc": "^17.1.0",
     "serve": "^14.2.5",
     "v8-to-istanbul": "^9.3.0",
-    "vitest": "^4.0.16"
+    "vitest": "4.0.16"
   }
 }

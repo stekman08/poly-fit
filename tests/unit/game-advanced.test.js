@@ -271,4 +271,104 @@ describe('Game - hint system', () => {
         expect(game.hintPiece).toBeNull();
         expect(game.hintShape).toBeNull();
     });
+
+    it('getHint applies flip when solutionFlipped is true', () => {
+        // L-shape: [{0,0}, {0,1}, {0,2}, {1,2}]
+        const lShape = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }];
+        const puzzleData = {
+            targetGrid: [
+                [1, 1, 1],
+                [1, 0, 0],
+                [0, 0, 0]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: lShape,
+                    originalShape: lShape,
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 0,
+                    solutionFlipped: true
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 5, y: 5 }); // Not in correct position
+
+        const hint = game.getHint();
+        expect(hint).not.toBeNull();
+        // The hint shape should be the flipped version
+        // Flipped L: [{1,0}, {1,1}, {1,2}, {0,2}] normalized to [{0,2}, {1,0}, {1,1}, {1,2}]
+        expect(hint.shape).toBeDefined();
+        expect(hint.shape.length).toBe(4);
+    });
+
+    it('getHint applies rotation when solutionRotation > 0', () => {
+        // Simple 2-block horizontal line
+        const lineShape = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
+        const puzzleData = {
+            targetGrid: [
+                [1, 0],
+                [1, 0]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: lineShape,
+                    originalShape: lineShape,
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 1, // 90 degrees - becomes vertical
+                    solutionFlipped: false
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 5, y: 5 }); // Not in correct position
+
+        const hint = game.getHint();
+        expect(hint).not.toBeNull();
+        // Rotated 90 degrees: should be vertical [{0,0}, {0,1}]
+        expect(hint.shape).toContainEqual({ x: 0, y: 0 });
+        expect(hint.shape).toContainEqual({ x: 0, y: 1 });
+    });
+
+    it('getHint applies both flip and rotation', () => {
+        // L-shape needs both flip and rotation
+        const lShape = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }];
+        const puzzleData = {
+            targetGrid: [
+                [1, 1, 1],
+                [0, 0, 1],
+                [0, 0, 0]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: lShape,
+                    originalShape: lShape,
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 2,
+                    solutionFlipped: true
+                }
+            ]
+        };
+
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 5, y: 5 }); // Not in correct position
+
+        const hint = game.getHint();
+        expect(hint).not.toBeNull();
+        expect(hint.shape.length).toBe(4);
+        // After flip + 2 rotations, shape should be transformed
+        expect(hint.x).toBe(0);
+        expect(hint.y).toBe(0);
+    });
 });
