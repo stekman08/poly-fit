@@ -14,6 +14,7 @@ export default defineConfig({
         'js/input.js',
         'js/renderer.js',
         'js/sounds.js',
+        'js/haptics.js',
         'js/effects/**',
         'js/config/**',
         '**/node_modules/**',
