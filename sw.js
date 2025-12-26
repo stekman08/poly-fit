@@ -1,4 +1,4 @@
-// Version: 78edb3f • 2025-12-26 00:06
+// Version: b10d76e • 2025-12-26 00:49
 // PolyFit Service Worker
 // Cache name will be set dynamically based on version
 let CACHE_NAME = 'polyfit-v1'; // fallback

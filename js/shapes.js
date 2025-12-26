@@ -33,7 +33,7 @@ export function normalizeShape(shape) {
     }));
 }
 
-// Standard Polyominoes (approximate Ubongo set)
+// Standard Polyominoes
 // Defined relative to 0,0
 export const SHAPES = {
     // 3 blocks

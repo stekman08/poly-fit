@@ -139,7 +139,7 @@ export class Game {
                     // Let's count it or track it.
                     // If we just ignore it, we might get a false positive if target is solved but extra piece is hiding outside?
                     // No, because we check ALL pieces must be used?
-                    // "Ubongo" rules: fill the shape with exact set of pieces.
+                    // PolyFit rules: fill the shape with exact set of pieces.
                     // So every block of every piece must be in a VALID target spot.
                     return false;
                 }
