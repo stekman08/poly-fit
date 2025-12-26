@@ -140,4 +140,40 @@ test.describe('Tutorial', () => {
         );
         expect(count).toBe(0);
     });
+
+    test('hidden tutorial overlay does not capture touch events', async ({ page }) => {
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-new-game');
+        await page.click('#btn-got-it');
+        await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
+
+        // Get piece count before interaction
+        const piecesBefore = await page.evaluate(() =>
+            window.game.pieces.map(p => ({ id: p.id, x: p.x, y: p.y }))
+        );
+
+        // Find where the GOT IT button would be (center of screen, lower portion)
+        const canvas = page.locator('#game-canvas');
+        const box = await canvas.boundingBox();
+        const centerX = box.x + box.width / 2;
+        const centerY = box.y + box.height * 0.7; // Roughly where button was
+
+        // Swipe across where the hidden button is
+        await page.mouse.move(centerX - 50, centerY);
+        await page.mouse.down();
+        await page.mouse.move(centerX + 50, centerY, { steps: 5 });
+        await page.mouse.up();
+
+        await page.waitForTimeout(200);
+
+        // Verify game state is still the same (no new puzzle generated)
+        const piecesAfter = await page.evaluate(() =>
+            window.game.pieces.map(p => ({ id: p.id, x: p.x, y: p.y }))
+        );
+
+        // Pieces should have same IDs (no new puzzle was generated)
+        const idsBefore = piecesBefore.map(p => p.id).sort();
+        const idsAfter = piecesAfter.map(p => p.id).sort();
+        expect(idsAfter).toEqual(idsBefore);
+    });
 });
