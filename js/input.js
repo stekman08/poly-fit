@@ -19,6 +19,7 @@ export class InputHandler {
         this.dragOffset = { x: 0, y: 0 }; // Offset from top-left of piece to cursor
         this.dragStartPos = { x: 0, y: 0 }; // For gesture detection
         this.dragStartTime = 0;
+        this.activeTouchId = null; // Track which touch is dragging
 
         // Mobile offset config
         this.visualDragOffset = 0; // Pixels to shift piece UP when dragging
@@ -30,13 +31,25 @@ export class InputHandler {
         // Touch
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            this.handleStart(e.touches[0], true);
+            // Use the touch that just started (changedTouches), not all touches
+            const touch = e.changedTouches[0];
+            this.handleStart(touch, true, touch.identifier);
         }, { passive: false });
         window.addEventListener('touchmove', (e) => {
             if (this.draggingPiece) e.preventDefault();
-            this.handleMove(e.touches[0], true);
+            // Find our tracked touch by identifier
+            const touch = this.findTouchById(e.touches, this.activeTouchId);
+            if (touch) {
+                this.handleMove(touch, true);
+            }
         }, { passive: false });
-        window.addEventListener('touchend', (e) => this.handleEnd(e), { passive: false });
+        window.addEventListener('touchend', (e) => {
+            // Check if our tracked touch ended
+            const touch = this.findTouchById(e.changedTouches, this.activeTouchId);
+            if (touch) {
+                this.handleEnd(e);
+            }
+        }, { passive: false });
 
         // Mouse
         this.canvas.addEventListener('mousedown', (e) => this.handleStart(e, false));
@@ -54,8 +67,51 @@ export class InputHandler {
         };
     }
 
-    handleStart(input, isTouch) {
-        // preventDefault now handled in bindEvents
+    // Find a touch by its identifier in a TouchList
+    findTouchById(touchList, id) {
+        if (id === null) return null;
+        for (let i = 0; i < touchList.length; i++) {
+            if (touchList[i].identifier === id) {
+                return touchList[i];
+            }
+        }
+        return null;
+    }
+
+    // Snap piece to valid position (extracted for reuse)
+    snapPiece(piece) {
+        let snappedX = Math.round(piece.x);
+        let snappedY = Math.round(piece.y);
+
+        const shape = piece.currentShape;
+        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
+        snappedX = Math.max(0, Math.min(snappedX, 5 - pieceW));
+        snappedY = Math.max(0, snappedY);
+
+        const grid = this.game.targetGrid;
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
+
+        if (!isValid) {
+            snappedX = piece.dockX;
+            snappedY = piece.dockY;
+        }
+
+        this.game.updatePieceState(piece.id, {
+            x: snappedX,
+            y: snappedY
+        });
+
+        return isValid;
+    }
+
+    handleStart(input, isTouch, touchId = null) {
+        // If already dragging a piece, snap it first to prevent orphaned pieces
+        if (this.draggingPiece) {
+            this.snapPiece(this.draggingPiece);
+            this.draggingPiece = null;
+            this.activeTouchId = null;
+        }
 
         const pos = this.getCanvasCoords(input);
         const gridPos = this.renderer.pixelToGrid(pos.x, pos.y);
@@ -64,11 +120,6 @@ export class InputHandler {
         // We iterate in reverse to pick top-most if overlap
         for (let i = this.game.pieces.length - 1; i >= 0; i--) {
             const p = this.game.pieces[i];
-
-            // Simple bounding box check first
-            // Note: piece.x/y is top-left in grid units.
-            // Check if gridPos is within piece bounding box?
-            // More precise: check specific blocks.
 
             // Check if cursor hits any block of the piece
             const hit = p.currentShape.some(block => {
@@ -82,6 +133,7 @@ export class InputHandler {
 
             if (hit) {
                 this.draggingPiece = p;
+                this.activeTouchId = touchId; // Track which touch is dragging
 
                 // Set offsets
                 this.dragOffset = {
@@ -96,7 +148,6 @@ export class InputHandler {
                 this.visualDragOffset = isTouch ? TOUCH_LIFT_OFFSET : 0;
 
                 // Move piece to "active" layer (end of list)
-                // Remove and push
                 this.game.pieces.splice(i, 1);
                 this.game.pieces.push(p);
 
@@ -175,6 +226,7 @@ export class InputHandler {
         });
 
         this.draggingPiece = null;
+        this.activeTouchId = null;
         this.visualDragOffset = 0;
         this.onInteraction(true); // true = check win
     }

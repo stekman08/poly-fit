@@ -227,3 +227,107 @@ test.describe('Puzzle solvability', () => {
         }
     });
 });
+
+test.describe('Multi-touch safety', () => {
+    test('all pieces should have integer coordinates after interactions', async ({ page }) => {
+        await startGame(page);
+
+        // Do various interactions
+        const canvas = page.locator('#game-canvas');
+        const box = await canvas.boundingBox();
+
+        // Several quick taps/drags
+        for (let i = 0; i < 5; i++) {
+            const x = box.x + box.width * (0.2 + Math.random() * 0.6);
+            const y = box.y + box.height * (0.7 + Math.random() * 0.2);
+            await page.mouse.click(x, y);
+            await page.waitForTimeout(50);
+        }
+
+        // Verify all pieces have integer coordinates
+        const piecePositions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({
+                id: p.id,
+                x: p.x,
+                y: p.y
+            }));
+        });
+
+        for (const piece of piecePositions) {
+            expect(Number.isInteger(piece.x)).toBe(true);
+            expect(Number.isInteger(piece.y)).toBe(true);
+        }
+    });
+
+    test('rapid multi-point touches should not leave pieces at fractional positions', async ({ page }) => {
+        await startGame(page);
+
+        const canvas = page.locator('#game-canvas');
+        const box = await canvas.boundingBox();
+
+        // Simulate rapid interactions at different positions
+        // This mimics multi-touch by rapidly touching different areas
+        for (let round = 0; round < 3; round++) {
+            // Start a drag
+            const startX = box.x + box.width * 0.3;
+            const startY = box.y + box.height * 0.8;
+            await page.mouse.move(startX, startY);
+            await page.mouse.down();
+
+            // Move a bit
+            await page.mouse.move(startX + 20, startY - 50, { steps: 3 });
+
+            // Touch another area (simulates second finger)
+            const tapX = box.x + box.width * 0.7;
+            const tapY = box.y + box.height * 0.85;
+            await page.touchscreen.tap(tapX, tapY);
+
+            // Release first
+            await page.mouse.up();
+
+            await page.waitForTimeout(100);
+        }
+
+        // All pieces must have integer coordinates
+        const piecePositions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({
+                id: p.id,
+                x: p.x,
+                y: p.y
+            }));
+        });
+
+        for (const piece of piecePositions) {
+            expect(Number.isInteger(piece.x)).toBe(true);
+            expect(Number.isInteger(piece.y)).toBe(true);
+        }
+    });
+
+    test('piece coordinates are always snapped after any touch end', async ({ page }) => {
+        await startGame(page);
+
+        const canvas = page.locator('#game-canvas');
+        const box = await canvas.boundingBox();
+
+        // Start dragging in dock area
+        const startX = box.x + box.width * 0.5;
+        const startY = box.y + box.height * 0.8;
+
+        await page.mouse.move(startX, startY);
+        await page.mouse.down();
+        await page.mouse.move(startX + 15, startY - 30, { steps: 5 });
+        await page.mouse.up();
+
+        await page.waitForTimeout(100);
+
+        // Check all pieces
+        const positions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({ x: p.x, y: p.y }));
+        });
+
+        for (const pos of positions) {
+            expect(Number.isInteger(pos.x)).toBe(true);
+            expect(Number.isInteger(pos.y)).toBe(true);
+        }
+    });
+});
