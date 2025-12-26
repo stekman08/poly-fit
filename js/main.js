@@ -178,8 +178,8 @@ function onInteraction(checkWin = false) {
                         try {
                             if (window.goatcounter && window.goatcounter.count) {
                                 window.goatcounter.count({
-                                    path: '/event/maxlevel/' + maxLevel,
-                                    title: 'Max Level: ' + maxLevel,
+                                    path: '/polyfit/event/maxlevel/' + maxLevel,
+                                    title: 'PolyFit Max Level: ' + maxLevel,
                                     event: true
                                 });
                             }
