@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+async function startGame(page) {
+    await page.goto('/');
+    await page.waitForSelector('#start-screen');
+    await page.click('#btn-new-game');
+    await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+}
+
 test.describe('Touch interactions', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
     });
 
     test('tapping piece should not trigger level change', async ({ page }) => {
@@ -96,8 +102,7 @@ test.describe('Touch interactions', () => {
 
 test.describe('Puzzle solvability', () => {
     test('puzzle target area equals total piece blocks', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         const result = await page.evaluate(() => {
             const game = window.game;
@@ -123,11 +128,8 @@ test.describe('Puzzle solvability', () => {
     });
 
     test('multiple puzzles are solvable (smoke test)', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
-
-        // Generate 5 puzzles and verify they're structurally valid
         for (let i = 0; i < 5; i++) {
+            await startGame(page);
             const isValid = await page.evaluate(() => {
                 const game = window.game;
 
@@ -149,13 +151,6 @@ test.describe('Puzzle solvability', () => {
             });
 
             expect(isValid).toBe(true);
-
-            // Click "next level" to generate new puzzle (need to show win overlay first)
-            // Or just reload
-            if (i < 4) {
-                await page.reload();
-                await page.waitForSelector('#game-canvas');
-            }
         }
     });
 });

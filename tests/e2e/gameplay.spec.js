@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+async function startGame(page) {
+    await page.goto('/');
+    await page.waitForSelector('#start-screen');
+    await page.click('#btn-new-game');
+    await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+}
+
 test.describe('Gameplay - Win condition', () => {
     test('solving puzzle shows win overlay', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Get solution from game state
         const solution = await page.evaluate(() => {
@@ -43,8 +49,7 @@ test.describe('Gameplay - Win condition', () => {
     });
 
     test('checkWin returns true when puzzle is solved', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Solve the puzzle by placing pieces at solution positions
         const result = await page.evaluate(() => {
@@ -66,8 +71,7 @@ test.describe('Gameplay - Win condition', () => {
 
 test.describe('Gameplay - Rotation', () => {
     test('tapping on piece rotates it', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Get initial rotation of first piece
         const initialRotation = await page.evaluate(() => {
@@ -107,8 +111,7 @@ test.describe('Gameplay - Rotation', () => {
     });
 
     test('rotation cycles through 0-3', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Directly test rotation via game API
         const rotations = await page.evaluate(() => {
@@ -133,8 +136,7 @@ test.describe('Gameplay - Rotation', () => {
 
 test.describe('Gameplay - Invalid placement', () => {
     test('piece returns to dock when placed on wall', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Get a piece and its dock position
         const pieceInfo = await page.evaluate(() => {
@@ -164,8 +166,7 @@ test.describe('Gameplay - Invalid placement', () => {
     });
 
     test('piece snap validation works correctly', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForSelector('#game-canvas');
+        await startGame(page);
 
         // Find a valid target position (a 1 in the grid)
         const validPos = await page.evaluate(() => {
@@ -200,10 +201,8 @@ test.describe('Gameplay - Invalid placement', () => {
 
 test.describe('Gameplay - Multiple puzzles', () => {
     test('multiple page loads generate valid puzzles', async ({ page }) => {
-        // Test that puzzle generation is consistently valid across reloads
         for (let i = 0; i < 3; i++) {
-            await page.goto('/');
-            await page.waitForSelector('#game-canvas');
+            await startGame(page);
 
             // Verify puzzle is valid
             const isValid = await page.evaluate(() => {

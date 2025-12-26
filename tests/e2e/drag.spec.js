@@ -1,11 +1,14 @@
-
 import { test, expect } from '@playwright/test';
 
-test('drag piece', async ({ page }) => {
-    // Use the local server we know is running on 3001
-    await page.goto('http://localhost:3001');
+async function startGame(page) {
+    await page.goto('/');
+    await page.waitForSelector('#start-screen');
+    await page.click('#btn-new-game');
+    await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+}
 
-    // Wait for canvas
+test('drag piece', async ({ page }) => {
+    await startGame(page);
     const canvas = page.locator('#game-canvas');
     await expect(canvas).toBeVisible();
 

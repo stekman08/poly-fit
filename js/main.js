@@ -14,10 +14,14 @@ import {
 const canvas = document.getElementById('game-canvas');
 const winOverlay = document.getElementById('win-overlay');
 const levelDisplay = document.getElementById('level-display');
+const startScreen = document.getElementById('start-screen');
+const btnNewGame = document.getElementById('btn-new-game');
+const btnContinue = document.getElementById('btn-continue');
 
 const renderer = new Renderer(canvas);
 let game = null;
-let level = parseInt(localStorage.getItem('polyfit-level'), 10) || 1;
+let level = 1;
+let maxLevel = parseInt(localStorage.getItem('polyfit-max-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 
@@ -95,7 +99,10 @@ function onInteraction(checkWin = false) {
             winOverlay.classList.remove('hidden');
             setTimeout(() => {
                 level++;
-                localStorage.setItem('polyfit-level', level);
+                if (level > maxLevel) {
+                    maxLevel = level;
+                    localStorage.setItem('polyfit-max-level', maxLevel);
+                }
                 startLevel();
             }, 1500);
         }, WIN_OVERLAY_DELAY);
@@ -122,5 +129,27 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-startLevel();
+function showStartScreen() {
+    if (maxLevel > 1) {
+        btnContinue.textContent = `Continue (Level ${maxLevel})`;
+        btnContinue.classList.remove('hidden');
+    } else {
+        btnContinue.classList.add('hidden');
+    }
+    startScreen.classList.remove('hidden');
+}
+
+btnNewGame.addEventListener('click', () => {
+    level = 1;
+    startScreen.classList.add('hidden');
+    startLevel();
+});
+
+btnContinue.addEventListener('click', () => {
+    level = maxLevel;
+    startScreen.classList.add('hidden');
+    startLevel();
+});
+
+showStartScreen();
 loop();

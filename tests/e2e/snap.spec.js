@@ -1,8 +1,14 @@
-
 import { test, expect } from '@playwright/test';
 
+async function startGame(page) {
+    await page.goto('/');
+    await page.waitForSelector('#start-screen');
+    await page.click('#btn-new-game');
+    await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+}
+
 test('snap logic validation', async ({ page }) => {
-    await page.goto('http://localhost:3001');
+    await startGame(page);
     const canvas = page.locator('#game-canvas');
     await expect(canvas).toBeVisible();
 
