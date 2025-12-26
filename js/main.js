@@ -185,11 +185,8 @@ function showStartScreen() {
 btnNewGame.addEventListener('click', () => {
     level = 1;
     startScreen.classList.add('hidden');
-    if (shouldShowTutorial()) {
-        showTutorial();
-    } else {
-        startLevel();
-    }
+    // Always show tutorial on New Game (new player might be borrowing phone)
+    showTutorial();
 });
 
 btnContinue.addEventListener('click', () => {
