@@ -54,6 +54,7 @@ function startLevel() {
 
         let currentX = 0;
         let currentY = DOCK_Y;
+        let rowMaxHeight = 0;
 
         game.pieces.forEach((p) => {
             const pieceWidth = Math.max(...p.shape.map(b => b.x)) + 1;
@@ -61,7 +62,8 @@ function startLevel() {
 
             if (currentX + pieceWidth > 5) {
                 currentX = 0;
-                currentY += 3;
+                currentY += rowMaxHeight + 1; // Use actual row height + 1 spacing
+                rowMaxHeight = 0;
             }
 
             game.updatePieceState(p.id, {
@@ -73,6 +75,7 @@ function startLevel() {
             });
 
             currentX += pieceWidth;
+            rowMaxHeight = Math.max(rowMaxHeight, pieceHeight);
         });
 
     } catch (e) {

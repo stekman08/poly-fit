@@ -30,9 +30,9 @@ export class Renderer {
         // Vertical Layout Requirements:
         // Board: 5 blocks
         // Gap: 1 block
-        // Dock: 3 blocks (worst case pieces)
+        // Dock: 6 blocks (multiple rows of pieces)
         // Top/Bottom Padding: ~2 blocks equivalent
-        const totalGridHeight = 5 + 1 + 3 + 2;
+        const totalGridHeight = 5 + 1 + 6 + 2;
 
         // Horizontal:
         // Board 5 blocks + Padding
