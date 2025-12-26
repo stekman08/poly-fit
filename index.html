@@ -100,12 +100,17 @@
                     .catch(err => console.log('[PWA] Service Worker registration failed:', err));
             });
 
-            // Handle controller change (new SW activated) - only reload if there was already a controller
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (refreshing || !initialController) return;
                 refreshing = true;
                 console.log('[PWA] New version active, reloading...');
                 window.location.reload();
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    navigator.serviceWorker.ready.then(reg => reg.update());
+                }
             });
         }
 
