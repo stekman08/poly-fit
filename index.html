@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+    <title>PolyFit - Neon Puzzle</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="A neon-themed puzzle game - fit the pieces to solve the challenge">
+    <meta name="theme-color" content="#00ffff">
+
+    <!-- Apple iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PolyFit">
+
+    <!-- Android Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="PolyFit">
+
+    <!-- Icons for all platforms -->
+    <link rel="icon" type="image/png" sizes="144x144" href="icons/icon-144.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="icons/icon-256.png">
+    <link rel="icon" type="image/png" sizes="384x384" href="icons/icon-384.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Overlay -->
+        <div id="ui-layer">
+            <div id="header">
+                <h1 class="neon-text">POLYFIT</h1>
+                <div id="level-display">LEVEL 1</div>
+            </div>
+
+            <div id="win-overlay" class="hidden">
+                <div class="glass-modal">
+                    <h2 class="neon-text-green">CLARITY ACHIEVED</h2>
+                </div>
+            </div>
+            <div id="version-info" class="version-info"></div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+
+    <!-- Service Worker Registration with Auto-Update -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            let refreshing = false;
+            const initialController = navigator.serviceWorker.controller;
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => {
+                        console.log('[PWA] Service Worker registered');
+                        // Check for updates periodically
+                        setInterval(() => reg.update(), 60000);
+                    })
+                    .catch(err => console.log('[PWA] Service Worker registration failed:', err));
+            });
+
+            // Handle controller change (new SW activated) - only reload if there was already a controller
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing || !initialController) return;
+                refreshing = true;
+                console.log('[PWA] New version active, reloading...');
+                window.location.reload();
+            });
+        }
+
+        // Load and display version info
+        fetch('./version.json')
+            .then(response => response.json())
+            .then(data => {
+                const versionEl = document.getElementById('version-info');
+                if (versionEl) {
+                    versionEl.textContent = data.displayFull || '';
+                }
+            })
+            .catch(() => console.log('[Version] version.json not found'));
+    </script>
+</body>
+</html>
