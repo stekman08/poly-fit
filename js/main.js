@@ -17,7 +17,7 @@ const levelDisplay = document.getElementById('level-display');
 
 const renderer = new Renderer(canvas);
 let game = null;
-let level = 1;
+let level = parseInt(localStorage.getItem('polyfit-level'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 
@@ -105,6 +105,7 @@ function onInteraction(checkWin = false) {
                 // Auto-advance after showing message
                 setTimeout(() => {
                     level++;
+                    localStorage.setItem('polyfit-level', level);
                     startLevel();
                 }, 1500);
             }, WIN_OVERLAY_DELAY);
