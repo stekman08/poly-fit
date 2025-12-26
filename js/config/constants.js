@@ -6,6 +6,7 @@
 export const GRID_ROWS = 5;
 export const GRID_COLS = 5;
 export const DOCK_Y = 6;
+export const MAX_DOCK_Y = 11; // Maximum Y position to keep pieces visible
 
 // Gesture detection thresholds
 export const TAP_MAX_DISTANCE = 10;      // pixels - max movement for tap

@@ -92,11 +92,84 @@ test.describe('Touch interactions', () => {
         expect(piecesInDock).toBe(true);
     });
 
+    test('all pieces are within visible dock area', async ({ page }) => {
+        // Test that no pieces are placed outside the visible area
+        // The visible dock area is approximately Y=6 to Y=11
+        const MAX_VISIBLE_Y = 11;
+
+        const piecePositions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({
+                id: p.id,
+                y: p.y,
+                height: Math.max(...p.shape.map(b => b.y)) + 1
+            }));
+        });
+
+        for (const piece of piecePositions) {
+            const bottomY = piece.y + piece.height;
+            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y + 1);
+        }
+    });
+
     test('checkWin returns false when pieces are in dock', async ({ page }) => {
         const isWin = await page.evaluate(() => {
             return window.game.checkWin();
         });
         expect(isWin).toBe(false);
+    });
+});
+
+test.describe('Dock visibility', () => {
+    test('all pieces visible at level 7 (4 pieces)', async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '7'));
+        await page.reload();
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-continue');
+        await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+
+        const MAX_VISIBLE_Y = 12;
+
+        const piecePositions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({
+                id: p.id,
+                y: p.y,
+                height: Math.max(...p.shape.map(b => b.y)) + 1
+            }));
+        });
+
+        expect(piecePositions.length).toBe(4); // Level 7 has 4 pieces
+
+        for (const piece of piecePositions) {
+            const bottomY = piece.y + piece.height;
+            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y);
+        }
+    });
+
+    test('all pieces visible at level 15 (5 pieces)', async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '15'));
+        await page.reload();
+        await page.waitForSelector('#start-screen');
+        await page.click('#btn-continue');
+        await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+
+        const MAX_VISIBLE_Y = 12;
+
+        const piecePositions = await page.evaluate(() => {
+            return window.game.pieces.map(p => ({
+                id: p.id,
+                y: p.y,
+                height: Math.max(...p.shape.map(b => b.y)) + 1
+            }));
+        });
+
+        expect(piecePositions.length).toBe(5); // Level 15+ has 5 pieces
+
+        for (const piece of piecePositions) {
+            const bottomY = piece.y + piece.height;
+            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y);
+        }
     });
 });
 

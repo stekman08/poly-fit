@@ -5,6 +5,7 @@ import { InputHandler } from './input.js';
 import { sounds } from './sounds.js';
 import {
     DOCK_Y,
+    MAX_DOCK_Y,
     LEVEL_3_PIECE_MAX,
     LEVEL_14_PIECE_MAX,
     WIN_OVERLAY_DELAY,
@@ -62,16 +63,20 @@ function startLevel() {
 
             if (currentX + pieceWidth > 5) {
                 currentX = 0;
-                currentY += rowMaxHeight + 1; // Use actual row height + 1 spacing
+                currentY += rowMaxHeight; // Pack rows tightly
                 rowMaxHeight = 0;
             }
 
+            // Ensure piece stays within visible dock area
+            const maxY = MAX_DOCK_Y - pieceHeight + 1;
+            const placementY = Math.min(currentY, maxY);
+
             game.updatePieceState(p.id, {
                 x: currentX,
-                y: currentY,
+                y: placementY,
                 rotation: 0,
                 dockX: currentX,
-                dockY: currentY
+                dockY: placementY
             });
 
             currentX += pieceWidth;
