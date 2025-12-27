@@ -1,6 +1,7 @@
 import { sounds } from './sounds.js';
 import { haptics } from './haptics.js';
 import { isValidPlacement } from './validation.js';
+import { getShapeDimensions } from './shapes.js';
 import {
     TAP_MAX_DISTANCE,
     TAP_MAX_DURATION,
@@ -9,7 +10,8 @@ import {
     TOUCH_LIFT_OFFSET,
     DOCK_Y,
     MAX_DOCK_Y,
-    DOCK_PIECE_SCALE
+    DOCK_PIECE_SCALE,
+    GRID_COLS
 } from './config/constants.js';
 
 export class InputHandler {
@@ -85,8 +87,7 @@ export class InputHandler {
     // Find nearest available dock position for a piece
     findNearestDockPosition(piece, targetX, targetY) {
         const shape = piece.currentShape;
-        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
-        const pieceH = Math.max(...shape.map(p => p.y)) + 1;
+        const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
 
         // Get other pieces in dock (excluding this one)
         const otherDockPieces = this.game.pieces.filter(p =>
@@ -105,7 +106,7 @@ export class InputHandler {
         // Check if a position is valid for this piece
         const canPlace = (x, y) => {
             // Bounds check
-            if (x < 0 || x + pieceW > 5) return false;
+            if (x < 0 || x + pieceW > GRID_COLS) return false;
             if (y < DOCK_Y || y + pieceH > MAX_DOCK_Y + 1) return false;
 
             // Collision check
@@ -119,7 +120,7 @@ export class InputHandler {
         // Try positions in order of distance from target
         const candidates = [];
         for (let y = DOCK_Y; y <= MAX_DOCK_Y - pieceH + 1; y++) {
-            for (let x = 0; x <= 5 - pieceW; x++) {
+            for (let x = 0; x <= GRID_COLS - pieceW; x++) {
                 if (canPlace(x, y)) {
                     const dist = Math.hypot(x - targetX, y - targetY);
                     candidates.push({ x, y, dist });
@@ -138,8 +139,8 @@ export class InputHandler {
         let snappedY = Math.round(piece.y);
 
         const shape = piece.currentShape;
-        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
-        snappedX = Math.max(0, Math.min(snappedX, 5 - pieceW));
+        const { width: pieceW } = getShapeDimensions(shape);
+        snappedX = Math.max(0, Math.min(snappedX, GRID_COLS - pieceW));
         snappedY = Math.max(0, snappedY);
 
         const grid = this.game.targetGrid;
@@ -184,8 +185,7 @@ export class InputHandler {
 
             // Calculate piece center for scaled hit detection
             const shape = p.currentShape;
-            const pieceW = Math.max(...shape.map(b => b.x)) + 1;
-            const pieceH = Math.max(...shape.map(b => b.y)) + 1;
+            const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
             const centerX = p.x + pieceW / 2;
             const centerY = p.y + pieceH / 2;
 
@@ -260,13 +260,12 @@ export class InputHandler {
 
     updateGhostPreview(piece, currentX, currentY) {
         const shape = piece.currentShape;
-        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
-        const pieceH = Math.max(...shape.map(p => p.y)) + 1;
+        const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
 
         // Calculate snap position
         let snapX = Math.round(currentX);
         let snapY = Math.round(currentY);
-        snapX = Math.max(0, Math.min(snapX, 5 - pieceW));
+        snapX = Math.max(0, Math.min(snapX, GRID_COLS - pieceW));
         snapY = Math.max(0, snapY);
 
         const grid = this.game.targetGrid;
@@ -314,8 +313,8 @@ export class InputHandler {
 
         // Constraint: Keep piece within the 5-wide board horizontally
         const shape = this.draggingPiece.currentShape;
-        const pieceW = Math.max(...shape.map(p => p.x)) + 1;
-        snappedX = Math.max(0, Math.min(snappedX, 5 - pieceW));
+        const { width: pieceW } = getShapeDimensions(shape);
+        snappedX = Math.max(0, Math.min(snappedX, GRID_COLS - pieceW));
         snappedY = Math.max(0, snappedY);
 
         const grid = this.game.targetGrid;

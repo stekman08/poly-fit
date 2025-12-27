@@ -4,9 +4,11 @@ import { Renderer } from './renderer.js';
 import { InputHandler } from './input.js';
 import { sounds } from './sounds.js';
 import { haptics } from './haptics.js';
+import { getShapeDimensions } from './shapes.js';
 import {
     DOCK_Y,
     MAX_DOCK_Y,
+    GRID_COLS,
     LEVEL_3_PIECE_MAX,
     LEVEL_14_PIECE_MAX,
     LEVEL_49_PIECE_MAX,
@@ -67,6 +69,8 @@ let hintShown = false;
 let isWinning = false;
 let practiceMode = false; // When true, return to start screen after win
 let currentThemeIndex = 0;
+let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
+const MAX_GENERATION_RETRIES = 5;
 
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {
@@ -93,8 +97,10 @@ function loop() {
             const hint = game.getHint();
             if (hint) {
                 renderer.showHint(hint);
-                hintShown = true;
             }
+            // Mark as checked regardless of whether hint was shown
+            // (prevents recalculating every frame if no hint available)
+            hintShown = true;
         }
 
         renderer.draw(game);
@@ -103,6 +109,12 @@ function loop() {
 }
 
 function startLevel() {
+    // Clear previous game state to help GC
+    if (game) {
+        game.pieces = [];
+        game.targetGrid = null;
+    }
+
     const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3
         : level <= LEVEL_14_PIECE_MAX ? 4
         : level <= LEVEL_49_PIECE_MAX ? 5
@@ -120,8 +132,8 @@ function startLevel() {
 
         // Sort pieces by height (tallest first) for better bin packing
         const sortedPieces = [...game.pieces].sort((a, b) => {
-            const heightA = Math.max(...a.shape.map(bl => bl.y)) + 1;
-            const heightB = Math.max(...b.shape.map(bl => bl.y)) + 1;
+            const heightA = getShapeDimensions(a.shape).height;
+            const heightB = getShapeDimensions(b.shape).height;
             return heightB - heightA;
         });
 
@@ -130,10 +142,9 @@ function startLevel() {
         let rowMaxHeight = 0;
 
         sortedPieces.forEach((p) => {
-            const pieceWidth = Math.max(...p.shape.map(b => b.x)) + 1;
-            const pieceHeight = Math.max(...p.shape.map(b => b.y)) + 1;
+            const { width: pieceWidth, height: pieceHeight } = getShapeDimensions(p.shape);
 
-            if (currentX + pieceWidth > 5) {
+            if (currentX + pieceWidth > GRID_COLS) {
                 currentX = 0;
                 currentY += rowMaxHeight; // Pack rows tightly
                 rowMaxHeight = 0;
@@ -146,9 +157,7 @@ function startLevel() {
             game.updatePieceState(p.id, {
                 x: currentX,
                 y: placementY,
-                rotation: 0,
-                dockX: currentX,
-                dockY: placementY
+                rotation: 0
             });
 
             currentX += pieceWidth;
@@ -157,9 +166,19 @@ function startLevel() {
 
     } catch (e) {
         console.error("Generation failed", e);
+        generationRetryCount++;
+        if (generationRetryCount >= MAX_GENERATION_RETRIES) {
+            console.error("Too many generation failures, returning to start screen");
+            generationRetryCount = 0;
+            showStartScreen();
+            return;
+        }
         startLevel();
         return;
     }
+
+    // Reset retry counter on successful generation
+    generationRetryCount = 0;
 
     renderer.clearEffects();
     renderer.hideHint();
@@ -335,9 +354,10 @@ btnGotIt.addEventListener('click', hideTutorial);
 btnLevelSelect.addEventListener('click', showLevelSelect);
 btnBack.addEventListener('click', hideLevelSelect);
 
-// Title tap to cycle themes
+// Title tap to cycle themes (with guard against duplicate listeners)
 const startTitle = document.querySelector('.start-modal .neon-text');
-if (startTitle) {
+if (startTitle && !startTitle.hasAttribute('data-theme-listener')) {
+    startTitle.setAttribute('data-theme-listener', 'true');
     startTitle.style.cursor = 'pointer';
     startTitle.addEventListener('click', cycleTheme);
 }
