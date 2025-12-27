@@ -41,10 +41,27 @@ const THEMES = [
 ];
 const THEME_STORAGE_KEY = 'polyfit-theme';
 
+// Safe localStorage helpers (handles private browsing, disabled storage, etc.)
+function safeGetItem(key, defaultValue = null) {
+    try {
+        return localStorage.getItem(key) ?? defaultValue;
+    } catch {
+        return defaultValue;
+    }
+}
+
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // Silently fail - storage unavailable
+    }
+}
+
 const renderer = new Renderer(canvas);
 let game = null;
 let level = 1;
-let maxLevel = parseInt(localStorage.getItem('polyfit-max-level'), 10) || 1;
+let maxLevel = parseInt(safeGetItem('polyfit-max-level', '1'), 10) || 1;
 let lastInteractionTime = Date.now();
 let hintShown = false;
 let isWinning = false;
@@ -53,16 +70,12 @@ let currentThemeIndex = 0;
 
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {
-    try {
-        const timesShown = parseInt(localStorage.getItem(TUTORIAL_STORAGE_KEY) || '0', 10);
-        if (timesShown >= TUTORIAL_MAX_SHOWS) {
-            return false;
-        }
-        localStorage.setItem(TUTORIAL_STORAGE_KEY, String(timesShown + 1));
-        return true;
-    } catch {
-        return true; // Show if localStorage unavailable
+    const timesShown = parseInt(safeGetItem(TUTORIAL_STORAGE_KEY, '0'), 10);
+    if (timesShown >= TUTORIAL_MAX_SHOWS) {
+        return false;
     }
+    safeSetItem(TUTORIAL_STORAGE_KEY, String(timesShown + 1));
+    return true;
 }
 
 function showTutorial() {
@@ -181,7 +194,7 @@ function onInteraction(checkWin = false) {
                     level++;
                     if (level > maxLevel) {
                         maxLevel = level;
-                        localStorage.setItem('polyfit-max-level', maxLevel);
+                        safeSetItem('polyfit-max-level', maxLevel);
 
                         // Track new max level in analytics
                         try {
@@ -233,12 +246,12 @@ function cycleTheme() {
     currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
     const theme = THEMES[currentThemeIndex];
     applyTheme(theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme.name);
+    safeSetItem(THEME_STORAGE_KEY, theme.name);
     haptics.vibrateRotate(); // Subtle feedback
 }
 
 function loadTheme() {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const savedTheme = safeGetItem(THEME_STORAGE_KEY);
     if (savedTheme) {
         const index = THEMES.findIndex(t => t.name === savedTheme);
         if (index !== -1) {

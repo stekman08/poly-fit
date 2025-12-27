@@ -109,7 +109,7 @@ export class InputHandler {
             if (y < DOCK_Y || y + pieceH > MAX_DOCK_Y + 1) return false;
 
             // Collision check
-            for (const block of shape) {
+            for (const block of piece.currentShape) {
                 const key = `${x + block.x},${y + block.y}`;
                 if (dockOccupied.has(key)) return false;
             }
