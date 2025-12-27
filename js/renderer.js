@@ -111,8 +111,8 @@ export class Renderer {
         this.hintData = null;
     }
 
-    setGhostPreview(shape, x, y, color) {
-        this.ghostPreview = { shape, x, y, color };
+    setGhostPreview(shape, x, y, color, isValid = true) {
+        this.ghostPreview = { shape, x, y, color, isValid };
     }
 
     clearGhostPreview() {
@@ -143,20 +143,32 @@ export class Renderer {
     }
 
     drawGhostPreview(ghost) {
-        const { x, y, shape, color } = ghost;
+        const { x, y, shape, color, isValid } = ghost;
 
         this.ctx.save();
-        this.ctx.globalAlpha = GHOST_ALPHA;
-        this.ctx.fillStyle = color;
-        this.ctx.strokeStyle = color;
+
+        if (isValid) {
+            // Valid placement: solid ghost with piece color
+            this.ctx.globalAlpha = GHOST_ALPHA;
+            this.ctx.fillStyle = color;
+            this.ctx.strokeStyle = color;
+            this.ctx.setLineDash([4, 4]);
+        } else {
+            // Invalid placement: dimmed, no fill, just outline
+            this.ctx.globalAlpha = 0.2;
+            this.ctx.fillStyle = 'transparent';
+            this.ctx.strokeStyle = '#888';
+            this.ctx.setLineDash([2, 4]);
+        }
         this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([4, 4]);
 
         shape.forEach(block => {
             const pos = this.gridToPixel(x + block.x, y + block.y);
             const margin = 4;
             const size = this.gridSize - (margin * 2);
-            this.ctx.fillRect(pos.x + margin, pos.y + margin, size, size);
+            if (isValid) {
+                this.ctx.fillRect(pos.x + margin, pos.y + margin, size, size);
+            }
             this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
         });
 
