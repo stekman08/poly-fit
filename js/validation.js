@@ -1,4 +1,5 @@
 export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
+    if (!grid || grid.length === 0 || !grid[0]) return false;
     const rows = grid.length;
     const cols = grid[0].length;
 
