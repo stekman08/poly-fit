@@ -99,6 +99,7 @@ function startLevel() {
         const puzzleData = generatePuzzle(piecesCount);
         game = new Game(puzzleData);
         window.game = game;
+        window.renderer = renderer;
         window.getLevel = () => level;
         window.isWinning = () => isWinning;
         window.triggerCheckWin = () => onInteraction(true);
@@ -202,7 +203,7 @@ function onInteraction(checkWin = false) {
     }
 }
 
-new InputHandler(
+const inputHandler = new InputHandler(
     {
         get pieces() { return game ? game.pieces : []; },
         get targetGrid() { return game ? game.targetGrid : []; },
@@ -211,6 +212,7 @@ new InputHandler(
     renderer,
     onInteraction
 );
+window.inputHandler = inputHandler;
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {

@@ -8,7 +8,8 @@ import {
     SWIPE_MAX_DURATION,
     TOUCH_LIFT_OFFSET,
     DOCK_Y,
-    MAX_DOCK_Y
+    MAX_DOCK_Y,
+    DOCK_PIECE_SCALE
 } from './config/constants.js';
 
 export class InputHandler {
@@ -177,13 +178,30 @@ export class InputHandler {
         for (let i = this.game.pieces.length - 1; i >= 0; i--) {
             const p = this.game.pieces[i];
 
-            // Check if cursor hits any block of the piece
-            const hit = p.currentShape.some(block => {
+            // Pieces in dock are scaled down - hit detection must match visual size
+            const inDock = p.y >= DOCK_Y;
+            const scale = inDock ? DOCK_PIECE_SCALE : 1.0;
+
+            // Calculate piece center for scaled hit detection
+            const shape = p.currentShape;
+            const pieceW = Math.max(...shape.map(b => b.x)) + 1;
+            const pieceH = Math.max(...shape.map(b => b.y)) + 1;
+            const centerX = p.x + pieceW / 2;
+            const centerY = p.y + pieceH / 2;
+
+            // Check if cursor hits any block of the piece (accounting for scale)
+            const hit = shape.some(block => {
                 const bx = p.x + block.x;
                 const by = p.y + block.y;
+
+                // Scale block position relative to piece center
+                const scaledBx = centerX + (bx - centerX) * scale;
+                const scaledBy = centerY + (by - centerY) * scale;
+                const scaledSize = scale;
+
                 return (
-                    gridPos.x >= bx && gridPos.x < bx + 1 &&
-                    gridPos.y >= by && gridPos.y < by + 1
+                    gridPos.x >= scaledBx && gridPos.x < scaledBx + scaledSize &&
+                    gridPos.y >= scaledBy && gridPos.y < scaledBy + scaledSize
                 );
             });
 
