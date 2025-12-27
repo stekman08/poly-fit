@@ -261,6 +261,7 @@ export class InputHandler {
     updateGhostPreview(piece, currentX, currentY) {
         const shape = piece.currentShape;
         const pieceW = Math.max(...shape.map(p => p.x)) + 1;
+        const pieceH = Math.max(...shape.map(p => p.y)) + 1;
 
         // Calculate snap position
         let snapX = Math.round(currentX);
@@ -273,9 +274,14 @@ export class InputHandler {
         const otherPieces = this.game.pieces.filter(p => p !== piece);
         const isValid = isValidPlacement(shape, snapX, snapY, grid, otherPieces);
 
-        // Only show ghost if valid placement on board (not dock)
-        if (isValid && snapY < rows) {
-            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color);
+        // Show ghost if piece overlaps with board area (any part of piece above dock)
+        // This gives visual feedback based on where piece is drawn, not finger position
+        const pieceTopY = snapY;
+        const pieceBottomY = snapY + pieceH - 1;
+        const overlapsBoard = pieceTopY < rows;
+
+        if (overlapsBoard && snapY < rows) {
+            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color, isValid);
         } else {
             this.renderer.clearGhostPreview();
         }
