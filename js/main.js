@@ -99,6 +99,7 @@ function startLevel() {
         const puzzleData = generatePuzzle(piecesCount);
         game = new Game(puzzleData);
         window.game = game;
+        window.renderer = renderer;
         window.getLevel = () => level;
         window.isWinning = () => isWinning;
         window.triggerCheckWin = () => onInteraction(true);
