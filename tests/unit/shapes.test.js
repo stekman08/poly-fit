@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { rotateShape, flipShape, normalizeShape, SHAPES } from '../../js/shapes.js';
+import { rotateShape, flipShape, normalizeShape, getShapeDimensions, SHAPES } from '../../js/shapes.js';
 
 describe('Shape Transformations', () => {
     // Define a simple L-shape:
@@ -74,13 +74,12 @@ describe('Shape Transformations', () => {
 
 describe('Shape Definitions', () => {
     it('should have correct block counts for all shapes', () => {
+        expect(SHAPES.Domino.length).toBe(2);
         expect(SHAPES.Line3.length).toBe(3);
         expect(SHAPES.Corner3.length).toBe(3);
         expect(SHAPES.T.length).toBe(4);
         expect(SHAPES.L.length).toBe(4);
-        expect(SHAPES.J.length).toBe(4);
         expect(SHAPES.S.length).toBe(4);
-        expect(SHAPES.Z.length).toBe(4);
         expect(SHAPES.Square.length).toBe(4);
         expect(SHAPES.Line4.length).toBe(4);
         expect(SHAPES.C.length).toBe(5);
@@ -115,5 +114,48 @@ describe('Shape Definitions', () => {
         expect(y).toContainEqual({ x: 1, y: 1 });
         expect(y).toContainEqual({ x: 0, y: 2 });
         expect(y).toContainEqual({ x: 0, y: 3 });
+    });
+});
+
+describe('getShapeDimensions', () => {
+    it('should return correct dimensions for a shape', () => {
+        const lShape = [
+            { x: 0, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: 2 },
+            { x: 1, y: 2 }
+        ];
+        const dims = getShapeDimensions(lShape);
+        expect(dims.width).toBe(2);
+        expect(dims.height).toBe(3);
+    });
+
+    it('should return 0 dimensions for empty shape', () => {
+        const dims = getShapeDimensions([]);
+        expect(dims.width).toBe(0);
+        expect(dims.height).toBe(0);
+    });
+
+    it('should return 0 dimensions for null/undefined', () => {
+        expect(getShapeDimensions(null)).toEqual({ width: 0, height: 0 });
+        expect(getShapeDimensions(undefined)).toEqual({ width: 0, height: 0 });
+    });
+
+    it('should handle single block shape', () => {
+        const dims = getShapeDimensions([{ x: 0, y: 0 }]);
+        expect(dims.width).toBe(1);
+        expect(dims.height).toBe(1);
+    });
+
+    it('should handle line shapes correctly', () => {
+        // Vertical line
+        const vertical = getShapeDimensions(SHAPES.Line4);
+        expect(vertical.width).toBe(1);
+        expect(vertical.height).toBe(4);
+
+        // Horizontal line (after rotation)
+        const horizontal = getShapeDimensions(normalizeShape(rotateShape(SHAPES.Line4)));
+        expect(horizontal.width).toBe(4);
+        expect(horizontal.height).toBe(1);
     });
 });

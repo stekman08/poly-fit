@@ -1,4 +1,4 @@
-import { COLORS } from './shapes.js';
+import { COLORS, getShapeDimensions } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
 import { DOCK_Y, DOCK_PIECE_SCALE, GHOST_ALPHA } from './config/constants.js';
 
@@ -81,7 +81,6 @@ export class Renderer {
     draw(game) {
         this.clear();
         this.drawTargetGrid(game.targetGrid);
-        this.drawDockArea(game.pieces);
 
         // Draw hint if active
         if (this.hintData) {
@@ -187,6 +186,7 @@ export class Renderer {
     }
 
     drawTargetGrid(grid) {
+        if (!grid || grid.length === 0 || !grid[0]) return;
         const rows = grid.length;
         const cols = grid[0].length;
 
@@ -212,10 +212,6 @@ export class Renderer {
             }
         }
         this.ctx.restore();
-    }
-
-    drawDockArea() {
-        // Optional: Draw a line separating board from hand?
     }
 
     drawPiece(piece, isDragging = false) {
@@ -257,8 +253,9 @@ export class Renderer {
 
         // Apply scaling transform (centered on piece)
         if (scale !== 1.0) {
-            const pieceWidth = (Math.max(...shape.map(b => b.x)) + 1) * this.gridSize;
-            const pieceHeight = (Math.max(...shape.map(b => b.y)) + 1) * this.gridSize;
+            const dims = getShapeDimensions(shape);
+            const pieceWidth = dims.width * this.gridSize;
+            const pieceHeight = dims.height * this.gridSize;
             const centerX = x + pieceWidth / 2;
             const centerY = y + pieceHeight / 2;
 

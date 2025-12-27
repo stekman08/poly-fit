@@ -77,8 +77,17 @@ export class ConfettiSystem {
     update() {
         if (!this.isActive) return;
 
-        this.particles.forEach(p => p.update());
-        this.particles = this.particles.filter(p => !p.isDead);
+        // Update all particles and remove dead ones in-place (swap-and-pop)
+        // This avoids creating new arrays every frame, reducing GC pressure
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.update();
+            if (p.isDead) {
+                // Swap with last element and pop
+                this.particles[i] = this.particles[this.particles.length - 1];
+                this.particles.pop();
+            }
+        }
 
         if (this.particles.length === 0) {
             this.isActive = false;

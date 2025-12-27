@@ -69,8 +69,6 @@ export class Game {
 
         if (newState.x !== undefined) piece.x = newState.x;
         if (newState.y !== undefined) piece.y = newState.y;
-        if (newState.dockX !== undefined) piece.dockX = newState.dockX;
-        if (newState.dockY !== undefined) piece.dockY = newState.dockY;
 
         if (newState.rotation !== undefined && newState.rotation !== piece.rotation) {
             piece.rotation = newState.rotation;

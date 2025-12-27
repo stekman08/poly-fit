@@ -19,6 +19,19 @@ export function flipShape(shape) {
     }));
 }
 
+// Get shape dimensions safely (handles empty shapes)
+export function getShapeDimensions(shape) {
+    if (!shape || shape.length === 0) {
+        return { width: 0, height: 0 };
+    }
+    let maxX = 0, maxY = 0;
+    for (const block of shape) {
+        if (block.x > maxX) maxX = block.x;
+        if (block.y > maxY) maxY = block.y;
+    }
+    return { width: maxX + 1, height: maxY + 1 };
+}
+
 // Normalize coordinates so the top-left-most block is at (0,0) (or closes to it)
 export function normalizeShape(shape) {
     const len = shape.length;
@@ -43,6 +56,9 @@ export function normalizeShape(shape) {
 // Standard Polyominoes
 // Defined relative to 0,0
 export const SHAPES = {
+    // 2 blocks (Domino)
+    Domino: [{ x: 0, y: 0 }, { x: 0, y: 1 }],
+
     // 3 blocks
     Line3: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }],
     Corner3: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
@@ -50,9 +66,7 @@ export const SHAPES = {
     // 4 blocks (Tetrominoes)
     T: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 1 }],
     L: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }],
-    J: [{ x: 1, y: 0 }, { x: 1, y: 1 }, { x: 1, y: 2 }, { x: 0, y: 2 }],
     S: [{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
-    Z: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 1 }],
     Square: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
     Line4: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }],
 

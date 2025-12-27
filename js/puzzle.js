@@ -1,5 +1,6 @@
 
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
+import { GRID_ROWS, GRID_COLS } from './config/constants.js';
 
 export function createGrid(rows = 6, cols = 6) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
@@ -89,7 +90,7 @@ export function generatePuzzle(numPieces = 3) {
     const shapeKeys = Object.keys(SHAPES);
 
     while (retries < MAX_RETRIES) {
-        const grid = createGrid(5, 5);
+        const grid = createGrid(GRID_ROWS, GRID_COLS);
         const pieces = [];
         let success = true;
 
@@ -165,7 +166,7 @@ export function generatePuzzle(numPieces = 3) {
 
             // CRITICAL: Verify the solution actually works by simulating placement
             // This catches bugs where the transformed shape doesn't match what we expect
-            const verifyGrid = createGrid(5, 5);
+            const verifyGrid = createGrid(GRID_ROWS, GRID_COLS);
             let solutionValid = true;
 
             for (const p of pieces) {
@@ -189,8 +190,8 @@ export function generatePuzzle(numPieces = 3) {
 
             // Compare verifyGrid with original grid
             if (solutionValid) {
-                for (let y = 0; y < 5; y++) {
-                    for (let x = 0; x < 5; x++) {
+                for (let y = 0; y < GRID_ROWS; y++) {
+                    for (let x = 0; x < GRID_COLS; x++) {
                         if (grid[y][x] !== verifyGrid[y][x]) {
                             solutionValid = false;
                             break;
@@ -237,6 +238,7 @@ export function generatePuzzle(numPieces = 3) {
                     // transform(startShape, R, F) == solutionShape
                     let effectiveRotation = 0;
                     let effectiveFlipped = false;
+                    let foundTransform = false;
 
                     findTransform:
                     for (let f = 0; f < 2; f++) {
@@ -255,9 +257,14 @@ export function generatePuzzle(numPieces = 3) {
                             if (match) {
                                 effectiveRotation = r;
                                 effectiveFlipped = f === 1;
+                                foundTransform = true;
                                 break findTransform;
                             }
                         }
+                    }
+
+                    if (!foundTransform) {
+                        throw new Error(`Could not find transform from start to solution for piece ${p.shapeName}`);
                     }
 
                     return {
