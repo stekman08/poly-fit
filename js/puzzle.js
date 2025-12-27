@@ -208,12 +208,69 @@ export function generatePuzzle(numPieces = 3) {
 
             return {
                 targetGrid: grid,
-                pieces: pieces.map(p => ({
-                    ...p,
-                    // Give the user the base shape, not the pre-rotated solution shape
-                    // They have to figure out rotation themselves.
-                    shape: p.originalShape
-                }))
+                pieces: pieces.map(p => {
+                    // Randomize starting orientation to prevent pattern learning
+                    const startRotation = Math.floor(Math.random() * 4);
+                    const startFlipped = Math.random() < 0.5;
+
+                    // Transform the base shape with random orientation
+                    let startShape = p.originalShape;
+                    if (startFlipped) {
+                        startShape = flipShape(startShape);
+                    }
+                    for (let r = 0; r < startRotation; r++) {
+                        startShape = rotateShape(startShape);
+                    }
+                    startShape = normalizeShape(startShape);
+
+                    // Calculate the actual solution shape
+                    let solutionShape = p.originalShape;
+                    if (p.solutionFlipped) {
+                        solutionShape = flipShape(solutionShape);
+                    }
+                    for (let r = 0; r < p.solutionRotation; r++) {
+                        solutionShape = rotateShape(solutionShape);
+                    }
+                    solutionShape = normalizeShape(solutionShape);
+
+                    // Find effectiveRotation and effectiveFlipped:
+                    // transform(startShape, R, F) == solutionShape
+                    let effectiveRotation = 0;
+                    let effectiveFlipped = false;
+
+                    findTransform:
+                    for (let f = 0; f < 2; f++) {
+                        for (let r = 0; r < 4; r++) {
+                            let testShape = startShape;
+                            if (f === 1) testShape = flipShape(testShape);
+                            for (let i = 0; i < r; i++) testShape = rotateShape(testShape);
+                            testShape = normalizeShape(testShape);
+
+                            // Compare shapes (both normalized, so direct comparison works)
+                            const match = testShape.length === solutionShape.length &&
+                                testShape.every((b, idx) =>
+                                    b.x === solutionShape[idx].x && b.y === solutionShape[idx].y
+                                );
+
+                            if (match) {
+                                effectiveRotation = r;
+                                effectiveFlipped = f === 1;
+                                break findTransform;
+                            }
+                        }
+                    }
+
+                    return {
+                        ...p,
+                        shape: startShape,
+                        // Track initial orientation so Game can compute correct solution
+                        startRotation,
+                        startFlipped,
+                        // Effective transform from startShape to solution
+                        effectiveRotation,
+                        effectiveFlipped
+                    };
+                })
             };
         }
         retries++;

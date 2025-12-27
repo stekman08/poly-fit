@@ -17,8 +17,8 @@ async function solvePuzzle(page) {
             game.updatePieceState(piece.id, {
                 x: piece.solutionX,
                 y: piece.solutionY,
-                rotation: piece.solutionRotation,
-                flipped: piece.solutionFlipped
+                rotation: piece.effectiveRotation,
+                flipped: piece.effectiveFlipped
             });
         }
     });
@@ -215,8 +215,8 @@ test.describe('Level Progression - State Consistency', () => {
             game.updatePieceState(piece.id, {
                 x: piece.solutionX,
                 y: piece.solutionY,
-                rotation: piece.solutionRotation,
-                flipped: piece.solutionFlipped
+                rotation: piece.effectiveRotation,
+                flipped: piece.effectiveFlipped
             });
         });
 
@@ -236,8 +236,8 @@ test.describe('Level Progression - State Consistency', () => {
                 game.updatePieceState(piece.id, {
                     x: piece.solutionX + 0.1,
                     y: piece.solutionY,
-                    rotation: piece.solutionRotation,
-                    flipped: piece.solutionFlipped
+                    rotation: piece.effectiveRotation,
+                    flipped: piece.effectiveFlipped
                 });
             }
         });

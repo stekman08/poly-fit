@@ -203,7 +203,7 @@ function onInteraction(checkWin = false) {
     }
 }
 
-new InputHandler(
+const inputHandler = new InputHandler(
     {
         get pieces() { return game ? game.pieces : []; },
         get targetGrid() { return game ? game.targetGrid : []; },
@@ -212,6 +212,7 @@ new InputHandler(
     renderer,
     onInteraction
 );
+window.inputHandler = inputHandler;
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {

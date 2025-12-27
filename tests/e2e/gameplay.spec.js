@@ -14,7 +14,7 @@ test.describe('Gameplay - Win condition', () => {
     test('solving puzzle shows win overlay', async ({ page }) => {
         await startGame(page);
 
-        // Get solution from game state
+        // Get solution from game state (using effective values for randomized start)
         const solution = await page.evaluate(() => {
             const game = window.game;
             // Return piece info with solution positions
@@ -22,8 +22,8 @@ test.describe('Gameplay - Win condition', () => {
                 id: p.id,
                 solutionX: p.solutionX,
                 solutionY: p.solutionY,
-                solutionRotation: p.solutionRotation,
-                solutionFlipped: p.solutionFlipped
+                effectiveRotation: p.effectiveRotation,
+                effectiveFlipped: p.effectiveFlipped
             }));
         });
 
@@ -41,8 +41,8 @@ test.describe('Gameplay - Win condition', () => {
                 id: piece.id,
                 x: piece.solutionX,
                 y: piece.solutionY,
-                rotation: piece.solutionRotation,
-                flipped: piece.solutionFlipped
+                rotation: piece.effectiveRotation,
+                flipped: piece.effectiveFlipped
             });
         }
 
@@ -61,8 +61,8 @@ test.describe('Gameplay - Win condition', () => {
                 game.updatePieceState(piece.id, {
                     x: piece.solutionX,
                     y: piece.solutionY,
-                    rotation: piece.solutionRotation,
-                    flipped: piece.solutionFlipped
+                    rotation: piece.effectiveRotation,
+                    flipped: piece.effectiveFlipped
                 });
             }
             return game.checkWin();

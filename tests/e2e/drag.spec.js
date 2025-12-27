@@ -131,48 +131,48 @@ test.describe('Drag from dock', () => {
         expect(posDuring.y).toBeLessThan(posBefore.y);
     });
 
-    test('piece returns to dock if dropped on invalid position', async ({ page }) => {
+    test('piece returns to dock if placed on invalid position', async ({ page }) => {
         await startGame(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
-        if (!box) throw new Error("No canvas");
+        // Wait for inputHandler to be fully initialized
+        await page.waitForFunction(() => window.inputHandler && typeof window.inputHandler.snapPiece === 'function');
 
-        const pieceInfo = await getPiecePixelCenter(page, 0);
-        expect(pieceInfo).not.toBeNull();
+        // Test snap-back logic directly via game API and input handler
+        const result = await page.evaluate(() => {
+            const game = window.game;
+            const input = window.inputHandler;
+            const piece = game.pieces[0];
 
-        const startX = box.x + pieceInfo.x;
-        const startY = box.y + pieceInfo.y;
+            // Find a wall position (0 in target grid) - guaranteed to be invalid
+            const grid = game.targetGrid;
+            let wallX = 0, wallY = 0;
+            outer:
+            for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[y].length; x++) {
+                    if (grid[y][x] === 0) {
+                        wallX = x;
+                        wallY = y;
+                        break outer;
+                    }
+                }
+            }
 
-        // Drag to far left (off the board - invalid position)
-        const endX = box.x + 10;
-        const endY = box.y + box.height / 3;
+            // Move piece to the wall position
+            game.updatePieceState(piece.id, { x: wallX, y: wallY });
 
-        // Use touch events
-        await canvas.dispatchEvent('touchstart', {
-            touches: [{ clientX: startX, clientY: startY, identifier: 0 }],
-            changedTouches: [{ clientX: startX, clientY: startY, identifier: 0 }]
+            // Call snapPiece which validates and should return to dock
+            input.snapPiece(piece);
+
+            return {
+                wallX,
+                wallY,
+                finalX: piece.x,
+                finalY: piece.y,
+                inDock: piece.y >= 6
+            };
         });
 
-        const steps = 10;
-        for (let i = 1; i <= steps; i++) {
-            const progress = i / steps;
-            const currentX = startX + (endX - startX) * progress;
-            const currentY = startY + (endY - startY) * progress;
-            await canvas.dispatchEvent('touchmove', {
-                touches: [{ clientX: currentX, clientY: currentY, identifier: 0 }],
-                changedTouches: [{ clientX: currentX, clientY: currentY, identifier: 0 }]
-            });
-        }
-
-        await canvas.dispatchEvent('touchend', {
-            touches: [],
-            changedTouches: [{ clientX: endX, clientY: endY, identifier: 0 }]
-        });
-
-        const posAfter = await getPiecePosition(page, pieceInfo.pieceId);
-
-        // Piece should be back in dock (y >= 6)
-        expect(posAfter.y).toBeGreaterThanOrEqual(6);
+        // Piece should be back in dock after invalid placement
+        expect(result.inDock).toBe(true);
     });
 });

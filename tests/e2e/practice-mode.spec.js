@@ -53,8 +53,8 @@ test.describe('Practice Mode', () => {
                 game.updatePieceState(piece.id, {
                     x: piece.solutionX,
                     y: piece.solutionY,
-                    rotation: piece.solutionRotation,
-                    flipped: piece.solutionFlipped
+                    rotation: piece.effectiveRotation,
+                    flipped: piece.effectiveFlipped
                 });
             });
         });
@@ -97,8 +97,8 @@ test.describe('Practice Mode', () => {
                 game.updatePieceState(piece.id, {
                     x: piece.solutionX,
                     y: piece.solutionY,
-                    rotation: piece.solutionRotation,
-                    flipped: piece.solutionFlipped
+                    rotation: piece.effectiveRotation,
+                    flipped: piece.effectiveFlipped
                 });
             });
         });
