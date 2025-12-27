@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { rotateShape, flipShape, normalizeShape } from '../../js/shapes.js';
+import { rotateShape, flipShape, normalizeShape, SHAPES } from '../../js/shapes.js';
 
 describe('Shape Transformations', () => {
     // Define a simple L-shape:
@@ -69,5 +69,51 @@ describe('Shape Transformations', () => {
             {x: 1, y: 0}
         ];
         expect(normalized).toEqual(expect.arrayContaining(expected));
+    });
+});
+
+describe('Shape Definitions', () => {
+    it('should have correct block counts for all shapes', () => {
+        expect(SHAPES.Line3.length).toBe(3);
+        expect(SHAPES.Corner3.length).toBe(3);
+        expect(SHAPES.T.length).toBe(4);
+        expect(SHAPES.L.length).toBe(4);
+        expect(SHAPES.J.length).toBe(4);
+        expect(SHAPES.S.length).toBe(4);
+        expect(SHAPES.Z.length).toBe(4);
+        expect(SHAPES.Square.length).toBe(4);
+        expect(SHAPES.Line4.length).toBe(4);
+        expect(SHAPES.C.length).toBe(5);
+        expect(SHAPES.P.length).toBe(5);
+        expect(SHAPES.L5.length).toBe(5);
+        expect(SHAPES.W.length).toBe(5);
+        expect(SHAPES.Y.length).toBe(5);
+    });
+
+    it('W pentomino should form staircase pattern', () => {
+        // W shape:
+        // ■ ■
+        //   ■
+        //   ■ ■
+        const w = normalizeShape(SHAPES.W);
+        expect(w).toContainEqual({ x: 0, y: 0 });
+        expect(w).toContainEqual({ x: 1, y: 0 });
+        expect(w).toContainEqual({ x: 1, y: 1 });
+        expect(w).toContainEqual({ x: 1, y: 2 });
+        expect(w).toContainEqual({ x: 2, y: 2 });
+    });
+
+    it('Y pentomino should form T with tail pattern', () => {
+        // Y shape:
+        // ■
+        // ■ ■
+        // ■
+        // ■
+        const y = normalizeShape(SHAPES.Y);
+        expect(y).toContainEqual({ x: 0, y: 0 });
+        expect(y).toContainEqual({ x: 0, y: 1 });
+        expect(y).toContainEqual({ x: 1, y: 1 });
+        expect(y).toContainEqual({ x: 0, y: 2 });
+        expect(y).toContainEqual({ x: 0, y: 3 });
     });
 });

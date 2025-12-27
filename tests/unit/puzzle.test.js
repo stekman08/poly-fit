@@ -57,7 +57,8 @@ describe('Puzzle Generation Logic', () => {
 
         it('should generate puzzles where the solution actually works', () => {
             // Test multiple puzzles to catch intermittent bugs
-            for (let i = 0; i < 20; i++) {
+            // Run 50 iterations to ensure all shapes (including W, Y) get tested
+            for (let i = 0; i < 50; i++) {
                 const numPieces = 3 + (i % 3); // 3, 4, or 5 pieces
                 const result = generatePuzzle(numPieces);
 
