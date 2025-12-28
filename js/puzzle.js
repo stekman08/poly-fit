@@ -1,12 +1,18 @@
 
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
 import { GRID_ROWS, GRID_COLS } from './config/constants.js';
+import { selectPiecesWithBias } from './config/difficulty.js';
 
 export function createGrid(rows = 6, cols = 6) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
 }
 
+// Mark cells as "holes" (blocked, can't place pieces)
+// Value -1 = hole (blocked), 0 = empty, 1 = piece placed
+const HOLE_VALUE = -1;
+
 // Check if a piece (array of coords) can be placed at grid x,y
+// Grid values: -1 = hole (blocked), 0 = empty, 1+ = piece placed
 export function canPlacePiece(grid, shape, startX, startY) {
     const rows = grid.length;
     const cols = grid[0].length;
@@ -20,9 +26,9 @@ export function canPlacePiece(grid, shape, startX, startY) {
             return false; // Out of bounds
         }
 
-        // Check collision
+        // Check collision (0 = empty, anything else is occupied or hole)
         if (grid[y][x] !== 0) {
-            return false; // Occupied
+            return false; // Occupied or hole
         }
     }
     return true;
@@ -83,23 +89,82 @@ function findValidPlacements(grid, shape, requireAdjacent) {
     return placements;
 }
 
-// Generate a solvable puzzle
-export function generatePuzzle(numPieces = 3) {
+/**
+ * Add holes to the interior of the puzzle area
+ * Holes are placed away from edges to create interesting constraints
+ */
+function addHolesToGrid(grid, numHoles, occupiedCells) {
+    if (numHoles === 0) return;
+
+    const rows = grid.length;
+    const cols = grid[0].length;
+
+    // Find valid hole positions (not on edge, not occupied)
+    const validPositions = [];
+    for (let y = 1; y < rows - 1; y++) {
+        for (let x = 1; x < cols - 1; x++) {
+            if (grid[y][x] === 0 && !occupiedCells.has(`${x},${y}`)) {
+                validPositions.push({ x, y });
+            }
+        }
+    }
+
+    shuffleArray(validPositions);
+
+    // Place holes, ensuring they don't touch each other (creates harder puzzles)
+    const holes = [];
+    for (const pos of validPositions) {
+        if (holes.length >= numHoles) break;
+
+        // Check that no adjacent cell is already a hole
+        const hasAdjacentHole = holes.some(h =>
+            Math.abs(h.x - pos.x) <= 1 && Math.abs(h.y - pos.y) <= 1
+        );
+
+        if (!hasAdjacentHole) {
+            grid[pos.y][pos.x] = HOLE_VALUE;
+            holes.push(pos);
+        }
+    }
+}
+
+/**
+ * Generate a solvable puzzle with difficulty parameters
+ * @param {Object} config - Difficulty configuration
+ * @param {number} config.numPieces - Number of pieces (default: 3)
+ * @param {number} config.boardRows - Board height (default: GRID_ROWS)
+ * @param {number} config.boardCols - Board width (default: GRID_COLS)
+ * @param {number} config.numHoles - Number of interior holes (default: 0)
+ * @param {number} config.asymmetricBias - Bias toward hard pieces 0-1 (default: 0)
+ */
+export function generatePuzzle(config = {}) {
+    // Support legacy call: generatePuzzle(3) -> generatePuzzle({numPieces: 3})
+    if (typeof config === 'number') {
+        config = { numPieces: config };
+    }
+
+    const {
+        numPieces = 3,
+        boardRows = GRID_ROWS,
+        boardCols = GRID_COLS,
+        numHoles = 0,
+        asymmetricBias = 0
+    } = config;
+
     const MAX_RETRIES = 200;
     let retries = 0;
     const shapeKeys = Object.keys(SHAPES);
 
     while (retries < MAX_RETRIES) {
-        const grid = createGrid(GRID_ROWS, GRID_COLS);
+        const grid = createGrid(boardRows, boardCols);
         const pieces = [];
         let success = true;
 
-        // Shuffle shape order for variety
-        const shuffledShapeKeys = shuffleArray([...shapeKeys]);
+        // Select pieces based on difficulty bias
+        const selectedShapes = selectPiecesWithBias(numPieces, asymmetricBias, shapeKeys);
 
         for (let i = 0; i < numPieces; i++) {
-            // Pick shape (cycle through shuffled list for variety)
-            const shapeName = shuffledShapeKeys[i % shuffledShapeKeys.length];
+            const shapeName = selectedShapes[i];
             const baseShape = SHAPES[shapeName];
 
             // Try all 8 orientations (4 rotations × 2 flip states)
@@ -148,6 +213,19 @@ export function generatePuzzle(numPieces = 3) {
         }
 
         if (success) {
+            // Collect occupied cells for hole placement
+            const occupiedCells = new Set();
+            for (let y = 0; y < boardRows; y++) {
+                for (let x = 0; x < boardCols; x++) {
+                    if (grid[y][x] === 1) {
+                        occupiedCells.add(`${x},${y}`);
+                    }
+                }
+            }
+
+            // Add holes to empty spaces (not where pieces are)
+            addHolesToGrid(grid, numHoles, occupiedCells);
+
             // Verify: target spots should equal total piece blocks
             let targetSpots = 0;
             for (const row of grid) {
@@ -166,7 +244,17 @@ export function generatePuzzle(numPieces = 3) {
 
             // CRITICAL: Verify the solution actually works by simulating placement
             // This catches bugs where the transformed shape doesn't match what we expect
-            const verifyGrid = createGrid(GRID_ROWS, GRID_COLS);
+            const verifyGrid = createGrid(boardRows, boardCols);
+
+            // Copy holes to verify grid
+            for (let y = 0; y < boardRows; y++) {
+                for (let x = 0; x < boardCols; x++) {
+                    if (grid[y][x] === HOLE_VALUE) {
+                        verifyGrid[y][x] = HOLE_VALUE;
+                    }
+                }
+            }
+
             let solutionValid = true;
 
             for (const p of pieces) {
@@ -190,8 +278,8 @@ export function generatePuzzle(numPieces = 3) {
 
             // Compare verifyGrid with original grid
             if (solutionValid) {
-                for (let y = 0; y < GRID_ROWS; y++) {
-                    for (let x = 0; x < GRID_COLS; x++) {
+                for (let y = 0; y < boardRows; y++) {
+                    for (let x = 0; x < boardCols; x++) {
                         if (grid[y][x] !== verifyGrid[y][x]) {
                             solutionValid = false;
                             break;
@@ -209,6 +297,8 @@ export function generatePuzzle(numPieces = 3) {
 
             return {
                 targetGrid: grid,
+                boardRows,
+                boardCols,
                 pieces: pieces.map(p => {
                     // Randomize starting orientation to prevent pattern learning
                     const startRotation = Math.floor(Math.random() * 4);

@@ -10,8 +10,7 @@ import {
     TOUCH_LIFT_OFFSET,
     DOCK_Y,
     MAX_DOCK_Y,
-    DOCK_PIECE_SCALE,
-    GRID_COLS
+    DOCK_PIECE_SCALE
 } from './config/constants.js';
 
 export class InputHandler {
@@ -103,10 +102,13 @@ export class InputHandler {
             });
         });
 
+        // Get board width dynamically from targetGrid
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+
         // Check if a position is valid for this piece
         const canPlace = (x, y) => {
             // Bounds check
-            if (x < 0 || x + pieceW > GRID_COLS) return false;
+            if (x < 0 || x + pieceW > boardCols) return false;
             if (y < DOCK_Y || y + pieceH > MAX_DOCK_Y + 1) return false;
 
             // Collision check
@@ -120,7 +122,7 @@ export class InputHandler {
         // Try positions in order of distance from target
         const candidates = [];
         for (let y = DOCK_Y; y <= MAX_DOCK_Y - pieceH + 1; y++) {
-            for (let x = 0; x <= GRID_COLS - pieceW; x++) {
+            for (let x = 0; x <= boardCols - pieceW; x++) {
                 if (canPlace(x, y)) {
                     const dist = Math.hypot(x - targetX, y - targetY);
                     candidates.push({ x, y, dist });
@@ -140,7 +142,8 @@ export class InputHandler {
 
         const shape = piece.currentShape;
         const { width: pieceW } = getShapeDimensions(shape);
-        snappedX = Math.max(0, Math.min(snappedX, GRID_COLS - pieceW));
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        snappedX = Math.max(0, Math.min(snappedX, boardCols - pieceW));
         snappedY = Math.max(0, snappedY);
 
         const grid = this.game.targetGrid;
@@ -261,11 +264,12 @@ export class InputHandler {
     updateGhostPreview(piece, currentX, currentY) {
         const shape = piece.currentShape;
         const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
 
         // Calculate snap position
         let snapX = Math.round(currentX);
         let snapY = Math.round(currentY);
-        snapX = Math.max(0, Math.min(snapX, GRID_COLS - pieceW));
+        snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
         snapY = Math.max(0, snapY);
 
         const grid = this.game.targetGrid;
@@ -311,10 +315,11 @@ export class InputHandler {
         let snappedX = Math.round(this.draggingPiece.x);
         let snappedY = Math.round(this.draggingPiece.y);
 
-        // Constraint: Keep piece within the 5-wide board horizontally
+        // Constraint: Keep piece within the board horizontally
         const shape = this.draggingPiece.currentShape;
         const { width: pieceW } = getShapeDimensions(shape);
-        snappedX = Math.max(0, Math.min(snappedX, GRID_COLS - pieceW));
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        snappedX = Math.max(0, Math.min(snappedX, boardCols - pieceW));
         snappedY = Math.max(0, snappedY);
 
         const grid = this.game.targetGrid;
