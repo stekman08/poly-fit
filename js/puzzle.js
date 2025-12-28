@@ -1,15 +1,34 @@
 
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
 import { GRID_ROWS, GRID_COLS } from './config/constants.js';
-import { selectPiecesWithBias } from './config/difficulty.js';
+import { selectPiecesWithBias, IRREGULAR_SHAPES } from './config/difficulty.js';
 
 export function createGrid(rows = 6, cols = 6) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
 }
 
-// Mark cells as "holes" (blocked, can't place pieces)
-// Value -1 = hole (blocked), 0 = empty, 1 = piece placed
+// Grid cell values:
+// -2 = outside (cutout, not part of board) - rendered as background
+// -1 = hole (blocked, can't place pieces) - rendered as background
+//  0 = empty (valid placement spot)
+//  1 = piece placed / target spot
 const HOLE_VALUE = -1;
+const OUTSIDE_VALUE = -2;
+
+/**
+ * Apply irregular shape cutouts to a grid
+ * Marks cutout cells as OUTSIDE_VALUE (-2)
+ */
+function applyIrregularShape(grid, shapeName) {
+    if (!shapeName || !IRREGULAR_SHAPES[shapeName]) return;
+
+    const shape = IRREGULAR_SHAPES[shapeName];
+    for (const cutout of shape.cutouts) {
+        if (cutout.y < grid.length && cutout.x < grid[0].length) {
+            grid[cutout.y][cutout.x] = OUTSIDE_VALUE;
+        }
+    }
+}
 
 // Check if a piece (array of coords) can be placed at grid x,y
 // Grid values: -1 = hole (blocked), 0 = empty, 1+ = piece placed
@@ -136,6 +155,7 @@ function addHolesToGrid(grid, numHoles, occupiedCells) {
  * @param {number} config.boardCols - Board width (default: GRID_COLS)
  * @param {number} config.numHoles - Number of interior holes (default: 0)
  * @param {number} config.asymmetricBias - Bias toward hard pieces 0-1 (default: 0)
+ * @param {string} config.irregularShape - Irregular board shape name (default: null)
  */
 export function generatePuzzle(config = {}) {
     // Support legacy call: generatePuzzle(3) -> generatePuzzle({numPieces: 3})
@@ -148,7 +168,8 @@ export function generatePuzzle(config = {}) {
         boardRows = GRID_ROWS,
         boardCols = GRID_COLS,
         numHoles = 0,
-        asymmetricBias = 0
+        asymmetricBias = 0,
+        irregularShape = null
     } = config;
 
     const MAX_RETRIES = 200;
@@ -157,6 +178,12 @@ export function generatePuzzle(config = {}) {
 
     while (retries < MAX_RETRIES) {
         const grid = createGrid(boardRows, boardCols);
+
+        // Apply irregular shape cutouts if specified
+        if (irregularShape) {
+            applyIrregularShape(grid, irregularShape);
+        }
+
         const pieces = [];
         let success = true;
 
@@ -246,11 +273,11 @@ export function generatePuzzle(config = {}) {
             // This catches bugs where the transformed shape doesn't match what we expect
             const verifyGrid = createGrid(boardRows, boardCols);
 
-            // Copy holes to verify grid
+            // Copy holes and cutouts to verify grid
             for (let y = 0; y < boardRows; y++) {
                 for (let x = 0; x < boardCols; x++) {
-                    if (grid[y][x] === HOLE_VALUE) {
-                        verifyGrid[y][x] = HOLE_VALUE;
+                    if (grid[y][x] === HOLE_VALUE || grid[y][x] === OUTSIDE_VALUE) {
+                        verifyGrid[y][x] = grid[y][x];
                     }
                 }
             }
