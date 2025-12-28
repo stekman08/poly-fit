@@ -220,7 +220,7 @@ test.describe('Irregular Shapes', () => {
             });
             if (config.irregularShape !== null) {
                 foundIrregular = true;
-                expect(['L', 'T', 'cross', 'U']).toContain(config.irregularShape);
+                expect(['L', 'T', 'cross', 'U', 'H', 'C', 'plus']).toContain(config.irregularShape);
                 break;
             }
         }

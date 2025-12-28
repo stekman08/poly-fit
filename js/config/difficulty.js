@@ -98,6 +98,53 @@ const IRREGULAR_SHAPES = {
             {x: 2, y: 1}
         ]
         // 20 - 2 = 18 cells
+    },
+    // H-shape: 5x5 with middle sides cut
+    // #...#
+    // #...#
+    // #####
+    // #...#
+    // #...#
+    H: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0},
+            {x: 1, y: 1}, {x: 2, y: 1}, {x: 3, y: 1},
+            {x: 1, y: 3}, {x: 2, y: 3}, {x: 3, y: 3},
+            {x: 1, y: 4}, {x: 2, y: 4}, {x: 3, y: 4}
+        ]
+        // 25 - 12 = 13 cells - only for 3 pieces
+    },
+    // C-shape: 5x5 with right side indented
+    // .####
+    // ##...
+    // ##...
+    // ##...
+    // .####
+    C: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 0, y: 0},
+            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1},
+            {x: 2, y: 2}, {x: 3, y: 2}, {x: 4, y: 2},
+            {x: 2, y: 3}, {x: 3, y: 3}, {x: 4, y: 3},
+            {x: 0, y: 4}
+        ]
+        // 25 - 11 = 14 cells - only for 3 pieces
+    },
+    // Plus-shape: 5x5 with corners cut (single cells)
+    // .###.
+    // #####
+    // #####
+    // #####
+    // .###.
+    plus: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 0, y: 0}, {x: 4, y: 0},
+            {x: 0, y: 4}, {x: 4, y: 4}
+        ]
+        // 25 - 4 = 21 cells
     }
 };
 
@@ -188,7 +235,10 @@ export function getDifficultyParams(level) {
             L: 19,      // 5x5 - 6 cutouts
             T: 21,      // 5x5 - 4 cutouts
             cross: 20,  // 6x6 - 16 cutouts
-            U: 18       // 5x4 - 2 cutouts
+            U: 18,      // 5x4 - 2 cutouts
+            H: 13,      // 5x5 - 12 cutouts (only 3 pieces)
+            C: 14,      // 5x5 - 11 cutouts (only 3 pieces)
+            plus: 21    // 5x5 - 4 cutouts
         };
 
         // Filter shapes that have enough cells
