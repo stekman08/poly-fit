@@ -11,6 +11,7 @@
  * - Level 15: 4 pieces
  * - Level 35: Wide/tall boards introduced
  * - Level 50: 5 pieces
+ * - Level 60: Irregular shapes (L, T, cross) introduced
  * - Level 75: Holes introduced
  * - Level 100: Extreme shapes (3×8, 8×3) introduced
  * - Level 125: 6 pieces
@@ -31,6 +32,93 @@ const BOARD_SHAPES = {
     largeSquare: { rows: 6, cols: 5 }, // 30 cells - fits 7 pieces
     largeWide: { rows: 5, cols: 6 },   // 30 cells - horizontal
 };
+
+/**
+ * Irregular board shapes - defined as masks on a base grid
+ * Each shape has: base dimensions + cutout cells (relative to top-left)
+ * Cutouts are cells that are "outside" the playable area
+ *
+ * These add variety, not difficulty - used from level 60+ with ~25% chance
+ */
+const IRREGULAR_SHAPES = {
+    // L-shape: 5x5 with top-right 2x2 corner cut
+    // ##...
+    // ##...
+    // #####
+    // #####
+    // #####
+    L: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0},
+            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1}
+        ]
+        // 25 - 6 = 19 cells
+    },
+    // T-shape: 5x5 with bottom corners cut
+    // #####
+    // #####
+    // #####
+    // .###.
+    // .###.
+    T: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 0, y: 3}, {x: 4, y: 3},
+            {x: 0, y: 4}, {x: 4, y: 4}
+        ]
+        // 25 - 4 = 21 cells
+    },
+    // Cross/plus shape: 6x6 with all corners cut (2x2 each)
+    // ..##..
+    // ..##..
+    // ######
+    // ######
+    // ..##..
+    // ..##..
+    cross: {
+        rows: 6, cols: 6,
+        cutouts: [
+            {x: 0, y: 0}, {x: 1, y: 0}, {x: 4, y: 0}, {x: 5, y: 0},
+            {x: 0, y: 1}, {x: 1, y: 1}, {x: 4, y: 1}, {x: 5, y: 1},
+            {x: 0, y: 4}, {x: 1, y: 4}, {x: 4, y: 4}, {x: 5, y: 4},
+            {x: 0, y: 5}, {x: 1, y: 5}, {x: 4, y: 5}, {x: 5, y: 5}
+        ]
+        // 36 - 16 = 20 cells
+    },
+    // U-shape: 5x4 with center top cut
+    // ##.##
+    // ##.##
+    // #####
+    // #####
+    U: {
+        rows: 4, cols: 5,
+        cutouts: [
+            {x: 2, y: 0},
+            {x: 2, y: 1}
+        ]
+        // 20 - 2 = 18 cells
+    },
+    // Steps/staircase: 5x5 diagonal steps
+    // #....
+    // ##...
+    // ###..
+    // ####.
+    // #####
+    steps: {
+        rows: 5, cols: 5,
+        cutouts: [
+            {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0},
+            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1},
+            {x: 3, y: 2}, {x: 4, y: 2},
+            {x: 4, y: 3}
+        ]
+        // 25 - 10 = 15 cells
+    }
+};
+
+// Export for use in puzzle.js
+export { IRREGULAR_SHAPES };
 
 // Piece categories by difficulty
 export const PIECE_CATEGORIES = {
@@ -101,25 +189,61 @@ export function getDifficultyParams(level) {
         }
     }
 
+    // --- IRREGULAR SHAPES ---
+    // Milestone 60: Irregular shapes introduced as variation (not difficulty)
+    // ~25% chance, independent of other factors
+    // Only used when numPieces <= 5 (irregular shapes have limited cells)
+    let irregularShape = null;
+
+    if (level >= 60 && numPieces <= 5 && Math.random() < 0.25) {
+        // Calculate minimum cells needed (rough estimate: 4 blocks per piece)
+        const minCells = numPieces * 4;
+
+        // Cell counts for each irregular shape
+        const shapeCells = {
+            L: 19,      // 5x5 - 6 cutouts
+            T: 21,      // 5x5 - 4 cutouts
+            cross: 20,  // 6x6 - 16 cutouts
+            U: 18,      // 5x4 - 2 cutouts
+            steps: 15   // 5x5 - 10 cutouts
+        };
+
+        // Filter shapes that have enough cells
+        const validShapes = Object.keys(shapeCells).filter(
+            name => shapeCells[name] >= minCells
+        );
+
+        if (validShapes.length > 0) {
+            irregularShape = validShapes[Math.floor(Math.random() * validShapes.length)];
+            // Override board dimensions with irregular shape dimensions
+            const shape = IRREGULAR_SHAPES[irregularShape];
+            boardShape = { rows: shape.rows, cols: shape.cols };
+        }
+    }
+
     // --- HOLES ---
     // Milestone 75: First hole introduced
     // Milestone 150: 2 holes possible
+    // Holes are disabled when using irregular shapes (already complex enough)
     let numHoles = 0;
-    const holeRoll = Math.random();
 
-    if (level < 75) {
-        numHoles = 0;
-    } else if (level < 150) {
-        // 1 hole max, logarithmic probability
-        const oneHoleProb = logProb(level, 75, 0.5, 50);
-        if (holeRoll < oneHoleProb) numHoles = 1;
-    } else {
-        // 2 holes possible
-        const oneHoleProb = logProb(level, 75, 0.5, 50);
-        const twoHoleProb = logProb(level, 150, 0.3, 60);
+    if (!irregularShape) {
+        const holeRoll = Math.random();
 
-        if (holeRoll < twoHoleProb) numHoles = 2;
-        else if (holeRoll < twoHoleProb + oneHoleProb) numHoles = 1;
+        if (level < 75) {
+            numHoles = 0;
+        } else if (level < 150) {
+            // 1 hole max, logarithmic probability
+            const oneHoleProb = logProb(level, 75, 0.5, 50);
+            if (holeRoll < oneHoleProb) numHoles = 1;
+        } else {
+            // 2 holes possible
+            const oneHoleProb = logProb(level, 75, 0.5, 50);
+            const twoHoleProb = logProb(level, 150, 0.3, 60);
+
+            if (holeRoll < twoHoleProb) numHoles = 2;
+            else if (holeRoll < twoHoleProb + oneHoleProb) numHoles = 1;
+        }
     }
 
     // --- PIECE SELECTION BIAS ---
@@ -144,7 +268,8 @@ export function getDifficultyParams(level) {
         boardRows: boardShape.rows,
         boardCols: boardShape.cols,
         numHoles,
-        asymmetricBias
+        asymmetricBias,
+        irregularShape  // null or shape name ('L', 'T', 'cross', 'U', 'steps')
     };
 }
 

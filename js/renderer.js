@@ -223,7 +223,7 @@ export class Renderer {
                     this.ctx.strokeRect(pos.x, pos.y, this.gridSize, this.gridSize);
                     this.ctx.shadowBlur = 0;
                 }
-                // Holes (-1) are not drawn - they appear as background
+                // Holes (-1) and outside cells (-2) are not drawn - they appear as background
             }
         }
         this.ctx.restore();

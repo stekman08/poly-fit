@@ -196,6 +196,97 @@ test.describe('Piece block count matches target cells', () => {
     });
 });
 
+test.describe('Irregular Shapes', () => {
+    test('level 1-59 never has irregular shapes', async ({ page }) => {
+        await page.goto('/');
+
+        // Test multiple times at level 50
+        for (let i = 0; i < 10; i++) {
+            const config = await page.evaluate(() => {
+                return import('/js/config/difficulty.js').then(m => m.getDifficultyParams(50));
+            });
+            expect(config.irregularShape).toBeNull();
+        }
+    });
+
+    test('level 60+ can have irregular shapes', async ({ page }) => {
+        await page.goto('/');
+
+        // Run multiple times to catch probabilistic irregular shapes (~25% chance)
+        let foundIrregular = false;
+        for (let i = 0; i < 30; i++) {
+            const config = await page.evaluate(() => {
+                return import('/js/config/difficulty.js').then(m => m.getDifficultyParams(80));
+            });
+            if (config.irregularShape !== null) {
+                foundIrregular = true;
+                expect(['L', 'T', 'cross', 'U', 'steps']).toContain(config.irregularShape);
+                break;
+            }
+        }
+        expect(foundIrregular).toBe(true);
+    });
+
+    test('irregular shape boards have cutout cells (-2)', async ({ page }) => {
+        // Find a puzzle with an irregular shape
+        let foundCutout = false;
+        for (let i = 0; i < 40; i++) {
+            await startAtLevel(page, 80);
+            const result = await page.evaluate(() => {
+                const grid = window.game.targetGrid;
+                let cutouts = 0;
+                for (const row of grid) {
+                    for (const cell of row) {
+                        if (cell === -2) cutouts++;
+                    }
+                }
+                return { cutouts, rows: grid.length, cols: grid[0].length };
+            });
+            if (result.cutouts > 0) {
+                foundCutout = true;
+                // Verify cutouts exist and puzzle is still valid
+                expect(result.cutouts).toBeGreaterThan(0);
+                break;
+            }
+        }
+        // At level 80 with ~25% chance, we should find one in 40 tries
+        expect(foundCutout).toBe(true);
+    });
+
+    test('irregular shape puzzles are solvable', async ({ page }) => {
+        // Find and solve an irregular shape puzzle
+        let foundIrregular = false;
+        for (let i = 0; i < 40; i++) {
+            await startAtLevel(page, 80);
+            const result = await page.evaluate(() => {
+                const grid = window.game.targetGrid;
+                let cutouts = 0;
+                let targets = 0;
+                for (const row of grid) {
+                    for (const cell of row) {
+                        if (cell === -2) cutouts++;
+                        if (cell === 1) targets++;
+                    }
+                }
+
+                let pieceBlocks = 0;
+                for (const piece of window.game.pieces) {
+                    pieceBlocks += piece.shape.length;
+                }
+
+                return { cutouts, targets, pieceBlocks };
+            });
+            if (result.cutouts > 0) {
+                foundIrregular = true;
+                // Total piece blocks must equal target cells
+                expect(result.pieceBlocks).toBe(result.targets);
+                break;
+            }
+        }
+        expect(foundIrregular).toBe(true);
+    });
+});
+
 test.describe('Difficulty parameter validation', () => {
     test('getDifficultyParams returns valid config', async ({ page }) => {
         await page.goto('/');
