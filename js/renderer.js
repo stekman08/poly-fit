@@ -14,6 +14,10 @@ export class Renderer {
         this.offsetX = 0; // Board centering
         this.offsetY = 0;
 
+        // Current board dimensions (updated when game changes)
+        this.boardRows = 5;
+        this.boardCols = 5;
+
         // Effects
         this.confetti = new ConfettiSystem();
 
@@ -28,6 +32,15 @@ export class Renderer {
         this.resize();
     }
 
+    // Update board dimensions (call when game changes)
+    setBoardSize(rows, cols) {
+        if (this.boardRows !== rows || this.boardCols !== cols) {
+            this.boardRows = rows;
+            this.boardCols = cols;
+            this.resize();
+        }
+    }
+
     resize() {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
@@ -35,15 +48,15 @@ export class Renderer {
         this.canvas.height = this.height;
 
         // Vertical Layout Requirements:
-        // Board: 5 blocks
+        // Board: boardRows blocks
         // Gap: 1 block
         // Dock: 8 blocks (more rows for scaled pieces)
         // Top/Bottom Padding: ~2 blocks equivalent
-        const totalGridHeight = 5 + 1 + 8 + 2; // = 16 (was 14)
+        const totalGridHeight = this.boardRows + 1 + 8 + 2;
 
         // Horizontal:
-        // Board 5 blocks + Padding
-        const totalGridWidth = 7;
+        // Board boardCols blocks + Padding
+        const totalGridWidth = this.boardCols + 2;
 
         const maxCellH = this.height / totalGridHeight;
         const maxCellW = this.width / totalGridWidth;
@@ -51,8 +64,8 @@ export class Renderer {
         // Pick the smaller to ensure fit
         this.gridSize = Math.floor(Math.min(maxCellH, maxCellW));
 
-        // Center Horizontally
-        this.offsetX = (this.width - (5 * this.gridSize)) / 2;
+        // Center Horizontally based on actual board width
+        this.offsetX = (this.width - (this.boardCols * this.gridSize)) / 2;
 
         // Position board below header with some padding
         this.offsetY = this.gridSize * 2.5;
@@ -197,10 +210,11 @@ export class Renderer {
         // Draw grid slots
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                if (grid[r][c] === 1) { // It's a valid target spot
-                    const pos = this.gridToPixel(c, r);
+                const cellValue = grid[r][c];
+                const pos = this.gridToPixel(c, r);
 
-                    // Draw visible pit with darker teal fill
+                if (cellValue === 1) {
+                    // Valid target spot - teal pit
                     this.ctx.fillStyle = 'rgba(0, 60, 70, 0.8)';
                     this.ctx.fillRect(pos.x, pos.y, this.gridSize, this.gridSize);
 
@@ -209,6 +223,7 @@ export class Renderer {
                     this.ctx.strokeRect(pos.x, pos.y, this.gridSize, this.gridSize);
                     this.ctx.shadowBlur = 0;
                 }
+                // Holes (-1) are not drawn - they appear as background
             }
         }
         this.ctx.restore();

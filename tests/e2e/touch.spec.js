@@ -123,7 +123,8 @@ test.describe('Touch interactions', () => {
 });
 
 test.describe('Dock visibility', () => {
-    test('all pieces visible at level 7 (4 pieces)', async ({ page }) => {
+    // New difficulty curve: level 7 has 3 pieces, level 15 has 4 pieces
+    test('all pieces visible at level 7 (3 pieces)', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('polyfit-max-level', '7');
@@ -144,7 +145,7 @@ test.describe('Dock visibility', () => {
             }));
         });
 
-        expect(piecePositions.length).toBe(4); // Level 7 has 4 pieces
+        expect(piecePositions.length).toBe(3); // Level 7 has 3 pieces (new curve)
 
         for (const piece of piecePositions) {
             const bottomY = piece.y + piece.height;
@@ -152,7 +153,7 @@ test.describe('Dock visibility', () => {
         }
     });
 
-    test('all pieces visible at level 15 (5 pieces)', async ({ page }) => {
+    test('all pieces visible at level 15 (4 pieces)', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('polyfit-max-level', '15');
@@ -173,7 +174,7 @@ test.describe('Dock visibility', () => {
             }));
         });
 
-        expect(piecePositions.length).toBe(5); // Level 15+ has 5 pieces
+        expect(piecePositions.length).toBe(4); // Level 15+ has 4 pieces (new curve)
 
         for (const piece of piecePositions) {
             const bottomY = piece.y + piece.height;

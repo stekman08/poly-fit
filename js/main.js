@@ -5,14 +5,10 @@ import { InputHandler } from './input.js';
 import { sounds } from './sounds.js';
 import { haptics } from './haptics.js';
 import { getShapeDimensions } from './shapes.js';
+import { getDifficultyParams } from './config/difficulty.js';
 import {
     DOCK_Y,
     MAX_DOCK_Y,
-    GRID_COLS,
-    LEVEL_3_PIECE_MAX,
-    LEVEL_14_PIECE_MAX,
-    LEVEL_49_PIECE_MAX,
-    LEVEL_99_PIECE_MAX,
     WIN_OVERLAY_DELAY,
     HINT_DELAY
 } from './config/constants.js';
@@ -115,13 +111,14 @@ function startLevel() {
         game.targetGrid = null;
     }
 
-    const piecesCount = level <= LEVEL_3_PIECE_MAX ? 3
-        : level <= LEVEL_14_PIECE_MAX ? 4
-        : level <= LEVEL_49_PIECE_MAX ? 5
-        : 6; // Max 6 pieces (5x5 grid = 25 cells, 7 pieces would need ~28 cells)
+    // Get difficulty parameters based on current level
+    const difficultyConfig = getDifficultyParams(level);
 
     try {
-        const puzzleData = generatePuzzle(piecesCount);
+        const puzzleData = generatePuzzle(difficultyConfig);
+
+        // Update renderer with new board dimensions
+        renderer.setBoardSize(puzzleData.boardRows, puzzleData.boardCols);
         game = new Game(puzzleData);
         window.game = game;
         window.renderer = renderer;
@@ -141,10 +138,12 @@ function startLevel() {
         let currentY = DOCK_Y;
         let rowMaxHeight = 0;
 
+        const dockCols = puzzleData.boardCols; // Use board width for dock layout
+
         sortedPieces.forEach((p) => {
             const { width: pieceWidth, height: pieceHeight } = getShapeDimensions(p.shape);
 
-            if (currentX + pieceWidth > GRID_COLS) {
+            if (currentX + pieceWidth > dockCols) {
                 currentX = 0;
                 currentY += rowMaxHeight; // Pack rows tightly
                 rowMaxHeight = 0;

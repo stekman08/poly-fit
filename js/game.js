@@ -145,19 +145,22 @@ export class Game {
         }
 
         // 2. Compare currentGrid with targetGrid
+        // Grid values: -1 = hole (blocked), 0 = wall, 1 = valid target spot
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
                 const targetVal = this.targetGrid[y][x];
                 const currentVal = currentGrid[y][x];
 
                 // Logic:
-                // If target is 1 (hole), current must be 1.
-                // If target is 0 (wall), current must be 0.
-                // If current > 1 (overlap), Fail.
+                // If target is 1 (valid spot), current must be exactly 1
+                // If target is 0 (wall), current must be 0
+                // If target is -1 (hole), current must be 0 (can't place on holes)
+                // If current > 1 (overlap), Fail
 
                 if (currentVal > 1) return false; // Overlap
-                if (targetVal === 1 && currentVal !== 1) return false; // Gap
+                if (targetVal === 1 && currentVal !== 1) return false; // Gap in target
                 if (targetVal === 0 && currentVal !== 0) return false; // Piece sticking out
+                if (targetVal === -1 && currentVal !== 0) return false; // Piece on hole
             }
         }
 
