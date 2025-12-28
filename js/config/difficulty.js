@@ -98,22 +98,6 @@ const IRREGULAR_SHAPES = {
             {x: 2, y: 1}
         ]
         // 20 - 2 = 18 cells
-    },
-    // Steps/staircase: 5x5 diagonal steps
-    // #....
-    // ##...
-    // ###..
-    // ####.
-    // #####
-    steps: {
-        rows: 5, cols: 5,
-        cutouts: [
-            {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0},
-            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1},
-            {x: 3, y: 2}, {x: 4, y: 2},
-            {x: 4, y: 3}
-        ]
-        // 25 - 10 = 15 cells
     }
 };
 
@@ -204,8 +188,7 @@ export function getDifficultyParams(level) {
             L: 19,      // 5x5 - 6 cutouts
             T: 21,      // 5x5 - 4 cutouts
             cross: 20,  // 6x6 - 16 cutouts
-            U: 18,      // 5x4 - 2 cutouts
-            steps: 15   // 5x5 - 10 cutouts
+            U: 18       // 5x4 - 2 cutouts
         };
 
         // Filter shapes that have enough cells
