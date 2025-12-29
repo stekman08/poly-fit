@@ -89,28 +89,34 @@ test.describe('Touch interactions', () => {
 
     test('pieces start in dock area', async ({ page }) => {
         const piecesInDock = await page.evaluate(() => {
-            // Dock Y is 6, board is 0-4
-            return window.game.pieces.every(p => p.y >= 5);
+            // Dock starts 1 row below the board
+            const boardRows = window.game.targetGrid.length;
+            const dockY = boardRows + 1;
+            return window.game.pieces.every(p => p.y >= dockY);
         });
         expect(piecesInDock).toBe(true);
     });
 
     test('all pieces are within visible dock area', async ({ page }) => {
         // Test that no pieces are placed outside the visible area
-        // The visible dock area is approximately Y=6 to Y=11
-        const MAX_VISIBLE_Y = 11;
+        // Dock has 8 rows, starting 1 below the board
+        const result = await page.evaluate(() => {
+            const boardRows = window.game.targetGrid.length;
+            const maxDockY = boardRows + 1 + 8 - 1; // dockY + DOCK_ROWS - 1
 
-        const piecePositions = await page.evaluate(() => {
-            return window.game.pieces.map(p => ({
-                id: p.id,
-                y: p.y,
-                height: Math.max(...p.shape.map(b => b.y)) + 1
-            }));
+            return {
+                maxDockY,
+                pieces: window.game.pieces.map(p => ({
+                    id: p.id,
+                    y: p.y,
+                    height: Math.max(...p.shape.map(b => b.y)) + 1
+                }))
+            };
         });
 
-        for (const piece of piecePositions) {
+        for (const piece of result.pieces) {
             const bottomY = piece.y + piece.height;
-            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y + 1);
+            expect(bottomY).toBeLessThanOrEqual(result.maxDockY + 1);
         }
     });
 
@@ -135,21 +141,25 @@ test.describe('Dock visibility', () => {
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
-        const MAX_VISIBLE_Y = 14; // MAX_DOCK_Y (13) + 1 for piece height
+        const result = await page.evaluate(() => {
+            const boardRows = window.game.targetGrid.length;
+            const maxDockY = boardRows + 1 + 8; // dockY + DOCK_ROWS
 
-        const piecePositions = await page.evaluate(() => {
-            return window.game.pieces.map(p => ({
-                id: p.id,
-                y: p.y,
-                height: Math.max(...p.shape.map(b => b.y)) + 1
-            }));
+            return {
+                maxDockY,
+                pieces: window.game.pieces.map(p => ({
+                    id: p.id,
+                    y: p.y,
+                    height: Math.max(...p.shape.map(b => b.y)) + 1
+                }))
+            };
         });
 
-        expect(piecePositions.length).toBe(3); // Level 7 has 3 pieces (new curve)
+        expect(result.pieces.length).toBe(3); // Level 7 has 3 pieces (new curve)
 
-        for (const piece of piecePositions) {
+        for (const piece of result.pieces) {
             const bottomY = piece.y + piece.height;
-            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y);
+            expect(bottomY).toBeLessThanOrEqual(result.maxDockY);
         }
     });
 
@@ -164,21 +174,25 @@ test.describe('Dock visibility', () => {
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
-        const MAX_VISIBLE_Y = 14; // MAX_DOCK_Y (13) + 1 for piece height
+        const result = await page.evaluate(() => {
+            const boardRows = window.game.targetGrid.length;
+            const maxDockY = boardRows + 1 + 8; // dockY + DOCK_ROWS
 
-        const piecePositions = await page.evaluate(() => {
-            return window.game.pieces.map(p => ({
-                id: p.id,
-                y: p.y,
-                height: Math.max(...p.shape.map(b => b.y)) + 1
-            }));
+            return {
+                maxDockY,
+                pieces: window.game.pieces.map(p => ({
+                    id: p.id,
+                    y: p.y,
+                    height: Math.max(...p.shape.map(b => b.y)) + 1
+                }))
+            };
         });
 
-        expect(piecePositions.length).toBe(4); // Level 15+ has 4 pieces (new curve)
+        expect(result.pieces.length).toBe(4); // Level 15+ has 4 pieces (new curve)
 
-        for (const piece of piecePositions) {
+        for (const piece of result.pieces) {
             const bottomY = piece.y + piece.height;
-            expect(bottomY).toBeLessThanOrEqual(MAX_VISIBLE_Y);
+            expect(bottomY).toBeLessThanOrEqual(result.maxDockY);
         }
     });
 });

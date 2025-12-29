@@ -45,9 +45,11 @@ async function getPiecePixelCenter(page, pieceIndex = 0) {
         const blockGridY = piece.y + firstBlock.y;
 
         // Calculate scaled position of this block's center
-        const DOCK_Y = 6;
+        // Dock starts 1 row below the board
+        const boardRows = game.targetGrid.length;
+        const dockY = boardRows + 1;
         const DOCK_PIECE_SCALE = 0.5;
-        const inDock = piece.y >= DOCK_Y;
+        const inDock = piece.y >= dockY;
         const scale = inDock ? DOCK_PIECE_SCALE : 1.0;
 
         // Scale block position relative to piece center
@@ -163,12 +165,16 @@ test.describe('Drag from dock', () => {
             // Call snapPiece which validates and should return to dock
             input.snapPiece(piece);
 
+            // Dock starts 1 row below the board
+            const boardRows = game.targetGrid.length;
+            const dockY = boardRows + 1;
+
             return {
                 wallX,
                 wallY,
                 finalX: piece.x,
                 finalY: piece.y,
-                inDock: piece.y >= 6
+                inDock: piece.y >= dockY
             };
         });
 

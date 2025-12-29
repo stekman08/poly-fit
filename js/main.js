@@ -7,8 +7,8 @@ import { haptics } from './haptics.js';
 import { getShapeDimensions } from './shapes.js';
 import { getDifficultyParams } from './config/difficulty.js';
 import {
-    DOCK_Y,
-    MAX_DOCK_Y,
+    getDockY,
+    getMaxDockY,
     WIN_OVERLAY_DELAY,
     HINT_DELAY
 } from './config/constants.js';
@@ -135,7 +135,9 @@ function startLevel() {
         });
 
         let currentX = 0;
-        let currentY = DOCK_Y;
+        const dockY = getDockY(puzzleData.boardRows);
+        const maxDockY = getMaxDockY(puzzleData.boardRows);
+        let currentY = dockY;
         let rowMaxHeight = 0;
 
         const dockCols = puzzleData.boardCols; // Use board width for dock layout
@@ -150,7 +152,7 @@ function startLevel() {
             }
 
             // Ensure piece stays within visible dock area
-            const maxY = MAX_DOCK_Y - pieceHeight + 1;
+            const maxY = maxDockY - pieceHeight + 1;
             const placementY = Math.min(currentY, maxY);
 
             game.updatePieceState(p.id, {
