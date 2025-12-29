@@ -191,31 +191,43 @@ export class InputHandler {
         for (let i = this.game.pieces.length - 1; i >= 0; i--) {
             const p = this.game.pieces[i];
 
-            // Pieces in dock are scaled down - hit detection must match visual size
             const inDock = p.y >= dockY;
-            const scale = inDock ? DOCK_PIECE_SCALE : 1.0;
-
-            // Calculate piece center for scaled hit detection
             const shape = p.currentShape;
             const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
-            const centerX = p.x + pieceW / 2;
-            const centerY = p.y + pieceH / 2;
 
-            // Check if cursor hits any block of the piece (accounting for scale)
-            const hit = shape.some(block => {
-                const bx = p.x + block.x;
-                const by = p.y + block.y;
+            let hit;
+            if (inDock) {
+                // Dock pieces: scaled hit detection with touch padding
+                const scale = DOCK_PIECE_SCALE;
+                const padding = 0.25; // Extra touch area around each block
+                const centerX = p.x + pieceW / 2;
+                const centerY = p.y + pieceH / 2;
 
-                // Scale block position relative to piece center
-                const scaledBx = centerX + (bx - centerX) * scale;
-                const scaledBy = centerY + (by - centerY) * scale;
-                const scaledSize = scale;
+                hit = shape.some(block => {
+                    const bx = p.x + block.x;
+                    const by = p.y + block.y;
 
-                return (
-                    gridPos.x >= scaledBx && gridPos.x < scaledBx + scaledSize &&
-                    gridPos.y >= scaledBy && gridPos.y < scaledBy + scaledSize
-                );
-            });
+                    // Scale block position relative to piece center
+                    const scaledBx = centerX + (bx - centerX) * scale;
+                    const scaledBy = centerY + (by - centerY) * scale;
+                    const scaledSize = scale;
+
+                    return (
+                        gridPos.x >= scaledBx - padding && gridPos.x < scaledBx + scaledSize + padding &&
+                        gridPos.y >= scaledBy - padding && gridPos.y < scaledBy + scaledSize + padding
+                    );
+                });
+            } else {
+                // Board pieces: precise per-block hit detection
+                hit = shape.some(block => {
+                    const bx = p.x + block.x;
+                    const by = p.y + block.y;
+                    return (
+                        gridPos.x >= bx && gridPos.x < bx + 1 &&
+                        gridPos.y >= by && gridPos.y < by + 1
+                    );
+                });
+            }
 
             if (hit) {
                 this.draggingPiece = p;
@@ -286,14 +298,9 @@ export class InputHandler {
         const otherPieces = this.game.pieces.filter(p => p !== piece);
         const isValid = isValidPlacement(shape, snapX, snapY, grid, otherPieces);
 
-        // Show ghost if piece overlaps with board area (any part of piece above dock)
-        // This gives visual feedback based on where piece is drawn, not finger position
-        const pieceTopY = snapY;
-        const pieceBottomY = snapY + pieceH - 1;
-        const overlapsBoard = pieceTopY < rows;
-
-        if (overlapsBoard && snapY < rows) {
-            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color, isValid);
+        // Only show ghost preview for valid placements
+        if (isValid && snapY < rows) {
+            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color, true);
         } else {
             this.renderer.clearGhostPreview();
         }
