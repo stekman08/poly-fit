@@ -8,8 +8,8 @@ import {
     SWIPE_MIN_DISTANCE,
     SWIPE_MAX_DURATION,
     TOUCH_LIFT_OFFSET,
-    DOCK_Y,
-    MAX_DOCK_Y,
+    getDockY,
+    getMaxDockY,
     DOCK_PIECE_SCALE
 } from './config/constants.js';
 
@@ -30,6 +30,11 @@ export class InputHandler {
         this.visualDragOffset = 0; // Pixels to shift piece UP when dragging
 
         this.bindEvents();
+    }
+
+    // Get board rows from current grid
+    getBoardRows() {
+        return this.game.targetGrid?.length || 5;
     }
 
     bindEvents() {
@@ -87,10 +92,13 @@ export class InputHandler {
     findNearestDockPosition(piece, targetX, targetY) {
         const shape = piece.currentShape;
         const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
+        const boardRows = this.getBoardRows();
+        const dockY = getDockY(boardRows);
+        const maxDockY = getMaxDockY(boardRows);
 
         // Get other pieces in dock (excluding this one)
         const otherDockPieces = this.game.pieces.filter(p =>
-            p !== piece && p.y >= DOCK_Y
+            p !== piece && p.y >= dockY
         );
 
         // Build occupancy grid for dock area
@@ -109,7 +117,7 @@ export class InputHandler {
         const canPlace = (x, y) => {
             // Bounds check
             if (x < 0 || x + pieceW > boardCols) return false;
-            if (y < DOCK_Y || y + pieceH > MAX_DOCK_Y + 1) return false;
+            if (y < dockY || y + pieceH > maxDockY + 1) return false;
 
             // Collision check
             for (const block of piece.currentShape) {
@@ -121,7 +129,7 @@ export class InputHandler {
 
         // Try positions in order of distance from target
         const candidates = [];
-        for (let y = DOCK_Y; y <= MAX_DOCK_Y - pieceH + 1; y++) {
+        for (let y = dockY; y <= maxDockY - pieceH + 1; y++) {
             for (let x = 0; x <= boardCols - pieceW; x++) {
                 if (canPlace(x, y)) {
                     const dist = Math.hypot(x - targetX, y - targetY);
@@ -132,7 +140,7 @@ export class InputHandler {
 
         // Sort by distance and return nearest
         candidates.sort((a, b) => a.dist - b.dist);
-        return candidates.length > 0 ? candidates[0] : { x: 0, y: DOCK_Y };
+        return candidates.length > 0 ? candidates[0] : { x: 0, y: dockY };
     }
 
     // Snap piece to valid position (extracted for reuse)
@@ -179,11 +187,12 @@ export class InputHandler {
 
         // Find piece under cursor
         // We iterate in reverse to pick top-most if overlap
+        const dockY = getDockY(this.getBoardRows());
         for (let i = this.game.pieces.length - 1; i >= 0; i--) {
             const p = this.game.pieces[i];
 
             // Pieces in dock are scaled down - hit detection must match visual size
-            const inDock = p.y >= DOCK_Y;
+            const inDock = p.y >= dockY;
             const scale = inDock ? DOCK_PIECE_SCALE : 1.0;
 
             // Calculate piece center for scaled hit detection

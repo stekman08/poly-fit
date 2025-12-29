@@ -5,8 +5,20 @@
 // Grid dimensions
 export const GRID_ROWS = 5;
 export const GRID_COLS = 5;
-export const DOCK_Y = 6;
-export const MAX_DOCK_Y = 13; // Maximum Y position to keep pieces visible (increased for more dock space)
+
+// Dock configuration
+export const DOCK_GAP = 1;    // Gap between board and dock (in grid cells)
+export const DOCK_ROWS = 8;   // Number of rows available in dock
+
+// Dynamic dock position based on board height
+export function getDockY(boardRows) {
+    return boardRows + DOCK_GAP;
+}
+
+export function getMaxDockY(boardRows) {
+    return boardRows + DOCK_GAP + DOCK_ROWS - 1;
+}
+
 export const DOCK_PIECE_SCALE = 0.5;  // Scale pieces down in dock (50%)
 export const BOARD_PIECE_SCALE = 1.0; // Full size on board
 export const GHOST_ALPHA = 0.4;       // Shadow/preview transparency on board

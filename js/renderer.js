@@ -1,6 +1,6 @@
 import { COLORS, getShapeDimensions } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
-import { DOCK_Y, DOCK_PIECE_SCALE, GHOST_ALPHA } from './config/constants.js';
+import { getDockY, DOCK_PIECE_SCALE, GHOST_ALPHA } from './config/constants.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -232,7 +232,8 @@ export class Renderer {
     drawPiece(piece, isDragging = false) {
         const shape = piece.currentShape;
         const color = piece.color || COLORS[0];
-        const inDock = piece.y >= DOCK_Y;
+        const dockY = getDockY(this.boardRows);
+        const inDock = piece.y >= dockY;
         const onBoard = !inDock && !isDragging;
 
         this.ctx.save();
