@@ -47,18 +47,24 @@ export class Renderer {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
 
+        // Minimum header offset to prevent board overlapping "LEVEL X" text
+        const MIN_HEADER_OFFSET = 80;
+
         // Vertical Layout Requirements:
+        // Header: MIN_HEADER_OFFSET pixels (fixed)
         // Board: boardRows blocks
         // Gap: 1 block
         // Dock: 8 blocks (more rows for scaled pieces)
-        // Top/Bottom Padding: ~2 blocks equivalent
-        const totalGridHeight = this.boardRows + 1 + 8 + 2;
+        // Bottom Padding: ~1 block equivalent
+        const contentGridHeight = this.boardRows + 1 + 8 + 1;
 
         // Horizontal:
         // Board boardCols blocks + Padding
         const totalGridWidth = this.boardCols + 2;
 
-        const maxCellH = this.height / totalGridHeight;
+        // Calculate gridSize from available space after header
+        const availableHeight = this.height - MIN_HEADER_OFFSET;
+        const maxCellH = availableHeight / contentGridHeight;
         const maxCellW = this.width / totalGridWidth;
 
         // Pick the smaller to ensure fit
@@ -67,8 +73,8 @@ export class Renderer {
         // Center Horizontally based on actual board width
         this.offsetX = (this.width - (this.boardCols * this.gridSize)) / 2;
 
-        // Position board below header with some padding
-        this.offsetY = this.gridSize * 2.5;
+        // Position board below header - use calculated offset or minimum, whichever is larger
+        this.offsetY = Math.max(this.gridSize * 2.5, MIN_HEADER_OFFSET);
     }
 
     // Convert Screen Pixels to Grid Coords (can be fractional)
