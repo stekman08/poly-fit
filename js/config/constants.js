@@ -30,7 +30,7 @@ export const SWIPE_MIN_DISTANCE = 30;    // pixels - min movement for swipe
 export const SWIPE_MAX_DURATION = 300;   // ms - max duration for swipe (must be fast)
 
 // Mobile UX
-export const TOUCH_LIFT_OFFSET = 100;    // pixels - lift piece above finger
+// TOUCH_LIFT_OFFSET moved to input.js as TOUCH_LIFT_GRID_CELLS (now relative to gridSize)
 
 // Difficulty scaling
 export const LEVEL_3_PIECE_MAX = 3;      // levels 1-3: 3 pieces

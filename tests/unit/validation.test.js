@@ -62,9 +62,11 @@ describe('isValidPlacement', () => {
         expect(result).toBe(false);
     });
 
-    it('accepts piece fully in dock area', () => {
+    it('rejects piece fully in dock area (triggers dock placement)', () => {
+        // Pieces in dock area are outside the board, so isValidPlacement returns false
+        // This is correct - it triggers the dock placement logic in input.js
         const result = isValidPlacement(verticalLine, 0, 6, grid5x5);
-        expect(result).toBe(true);
+        expect(result).toBe(false);
     });
 
     it('rejects piece horizontally outside board', () => {

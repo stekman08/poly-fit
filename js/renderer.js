@@ -194,9 +194,9 @@ export class Renderer {
     }
 
     triggerWinEffect() {
-        // Burst confetti from center of the board
-        const centerX = this.offsetX + (2.5 * this.gridSize);
-        const centerY = this.offsetY + (2.5 * this.gridSize);
+        // Burst confetti from center of the board (dynamic based on actual board size)
+        const centerX = this.offsetX + (this.boardCols / 2 * this.gridSize);
+        const centerY = this.offsetY + (this.boardRows / 2 * this.gridSize);
         this.confetti.burst(centerX, centerY, 100);
     }
 
