@@ -66,7 +66,7 @@ let isWinning = false;
 let practiceMode = false; // When true, return to start screen after win
 let currentThemeIndex = 0;
 let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
-const MAX_GENERATION_RETRIES = 5;
+const MAX_GENERATION_RETRIES = 10; // Higher for complex puzzles at level 200+
 
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {

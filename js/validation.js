@@ -1,10 +1,12 @@
 export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
     if (!grid || grid.length === 0 || !grid[0]) return false;
+    if (!shape || shape.length === 0) return false; // Reject empty shapes
+
     const rows = grid.length;
     const cols = grid[0].length;
 
     let hasBlockOnBoard = false;
-    let hasBlockBelowBoard = false;
+    let hasBlockOutsideBoard = false;
 
     const occupiedCells = new Set();
     for (const piece of otherPieces) {
@@ -29,12 +31,15 @@ export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
             if (occupiedCells.has(`${bx},${by}`)) {
                 return false;
             }
-        } else if (by >= rows) {
-            hasBlockBelowBoard = true;
+        } else {
+            // Block is outside the board (above or below)
+            hasBlockOutsideBoard = true;
         }
     }
 
-    if (hasBlockOnBoard && hasBlockBelowBoard) {
+    // Valid placement requires ALL blocks to be on the board
+    // Reject if any block is outside, or if no blocks are on board
+    if (hasBlockOutsideBoard || !hasBlockOnBoard) {
         return false;
     }
 

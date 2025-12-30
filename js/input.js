@@ -7,11 +7,14 @@ import {
     TAP_MAX_DURATION,
     SWIPE_MIN_DISTANCE,
     SWIPE_MAX_DURATION,
-    TOUCH_LIFT_OFFSET,
     getDockY,
     getMaxDockY,
     DOCK_PIECE_SCALE
 } from './config/constants.js';
+
+// Touch lift offset multiplier (in grid cells)
+// Lifts the piece above the finger by this many grid cells
+const TOUCH_LIFT_GRID_CELLS = 2.5;
 
 export class InputHandler {
     constructor(game, renderer, onInteraction) {
@@ -244,7 +247,8 @@ export class InputHandler {
                 this.dragStartTime = Date.now();
 
                 // Mobile: Lift piece up visually so finger doesn't hide it
-                this.visualDragOffset = isTouch ? TOUCH_LIFT_OFFSET : 0;
+                // Calculate dynamically based on gridSize for consistent UX across screen sizes
+                this.visualDragOffset = isTouch ? (this.renderer.gridSize * TOUCH_LIFT_GRID_CELLS) : 0;
 
                 // Move piece to "active" layer (end of list)
                 this.game.pieces.splice(i, 1);
