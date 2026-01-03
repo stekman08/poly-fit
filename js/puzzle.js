@@ -2,6 +2,7 @@
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
 import { GRID_ROWS, GRID_COLS } from './config/constants.js';
 import { selectPiecesWithBias, IRREGULAR_SHAPES } from './config/difficulty.js';
+import { countSolutions } from './solver.js';
 
 export function createGrid(rows = 6, cols = 6) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
@@ -172,7 +173,7 @@ export function generatePuzzle(config = {}) {
         irregularShape = null
     } = config;
 
-    const MAX_RETRIES = 200;
+    const MAX_RETRIES = 2000;
     let retries = 0;
     const shapeKeys = Object.keys(SHAPES);
 
@@ -240,6 +241,28 @@ export function generatePuzzle(config = {}) {
         }
 
         if (success) {
+            // Tightness Check for 6+ pieces (Level 125+)
+            // Filter out puzzles with too many solutions ("loose" puzzles)
+            if (numPieces >= 6) {
+                // Ensure solution pieces have originalShape for solver
+                const solverPieces = pieces.map(p => ({
+                    originalShape: p.originalShape,
+                    shapeName: p.shapeName
+                }));
+
+                // Max solutions allowed (Tightness threshold)
+                // Level 125-199 (6 pieces): Tight limit (10) to ensure quality
+                // Level 200+ (7 pieces): Relaxed limit (20) - Background worker allows more time for quality
+                const MAX_SOLUTIONS = numPieces >= 7 ? 20 : 10;
+
+                const count = countSolutions(grid, solverPieces, MAX_SOLUTIONS + 1);
+
+                if (count > MAX_SOLUTIONS) {
+                    // console.warn(`Puzzle too loose (${count} solutions), discarding. (Retries: ${retries})`);
+                    retries++;
+                    continue;
+                }
+            }
             // Collect occupied cells for hole placement
             const occupiedCells = new Set();
             for (let y = 0; y < boardRows; y++) {
