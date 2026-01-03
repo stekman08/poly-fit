@@ -307,8 +307,8 @@ function hideLevelSelect() {
 
 function buildLevelGrid() {
     levelGrid.innerHTML = '';
-    // Show up to maxLevel + some locked levels for preview
-    const showLevels = Math.min(maxLevel + 10, 100);
+    // Show maxLevel + 20 locked levels for preview
+    const showLevels = maxLevel + 20;
 
     for (let i = 1; i <= showLevels; i++) {
         const btn = document.createElement('button');

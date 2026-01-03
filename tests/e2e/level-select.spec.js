@@ -80,4 +80,22 @@ test.describe('Level Select', () => {
         const levelText = await page.locator('#level-display').textContent();
         expect(levelText).toContain('LEVEL 7');
     });
+    test('level select handles high levels (>100)', async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => localStorage.setItem('polyfit-max-level', '500'));
+        await page.reload();
+        await page.waitForSelector('#start-screen');
+
+        await page.click('#btn-level-select');
+        await page.waitForSelector('#level-select-screen:not(.hidden)');
+
+        // Should show up to 520 levels (500 + 20 locked preview)
+        const levelBtns = page.locator('.level-btn');
+        const count = await levelBtns.count();
+        expect(count).toBe(520);
+
+        // Level 500 should be unlocked, 501 locked
+        await expect(levelBtns.nth(499)).not.toHaveClass(/locked/); // 0-indexed, so 499 is level 500
+        await expect(levelBtns.nth(500)).toHaveClass(/locked/);
+    });
 });
