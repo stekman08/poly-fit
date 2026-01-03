@@ -28,9 +28,12 @@ const BOARD_SHAPES = {
     tall: { rows: 6, cols: 4 },        // 24 cells - vertical thinking
     long: { rows: 3, cols: 8 },        // 24 cells - very constrained
     narrow: { rows: 8, cols: 3 },      // 24 cells - very constrained
+    // Medium boards for 6 pieces (level 125-199)
+    mediumSquare: { rows: 6, cols: 6 }, // 36 cells - fits 6 pieces
+    mediumWide: { rows: 5, cols: 7 },   // 35 cells - horizontal
     // Large boards for 7 pieces (level 200+)
-    largeSquare: { rows: 6, cols: 5 }, // 30 cells - fits 7 pieces
-    largeWide: { rows: 5, cols: 6 },   // 30 cells - horizontal
+    largeSquare: { rows: 7, cols: 6 }, // 42 cells - ample space for 7 pieces (max ~35 blocks)
+    largeWide: { rows: 6, cols: 7 },   // 42 cells - horizontal
 };
 
 /**
@@ -50,8 +53,8 @@ const IRREGULAR_SHAPES = {
     L: {
         rows: 5, cols: 5,
         cutouts: [
-            {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0},
-            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1}
+            { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
+            { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 }
         ]
         // 25 - 6 = 19 cells
     },
@@ -64,8 +67,8 @@ const IRREGULAR_SHAPES = {
     T: {
         rows: 5, cols: 5,
         cutouts: [
-            {x: 0, y: 3}, {x: 4, y: 3},
-            {x: 0, y: 4}, {x: 4, y: 4}
+            { x: 0, y: 3 }, { x: 4, y: 3 },
+            { x: 0, y: 4 }, { x: 4, y: 4 }
         ]
         // 25 - 4 = 21 cells
     },
@@ -79,10 +82,10 @@ const IRREGULAR_SHAPES = {
     cross: {
         rows: 6, cols: 6,
         cutouts: [
-            {x: 0, y: 0}, {x: 1, y: 0}, {x: 4, y: 0}, {x: 5, y: 0},
-            {x: 0, y: 1}, {x: 1, y: 1}, {x: 4, y: 1}, {x: 5, y: 1},
-            {x: 0, y: 4}, {x: 1, y: 4}, {x: 4, y: 4}, {x: 5, y: 4},
-            {x: 0, y: 5}, {x: 1, y: 5}, {x: 4, y: 5}, {x: 5, y: 5}
+            { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 },
+            { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 },
+            { x: 0, y: 4 }, { x: 1, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 4 },
+            { x: 0, y: 5 }, { x: 1, y: 5 }, { x: 4, y: 5 }, { x: 5, y: 5 }
         ]
         // 36 - 16 = 20 cells
     },
@@ -94,8 +97,8 @@ const IRREGULAR_SHAPES = {
     U: {
         rows: 4, cols: 5,
         cutouts: [
-            {x: 2, y: 0},
-            {x: 2, y: 1}
+            { x: 2, y: 0 },
+            { x: 2, y: 1 }
         ]
         // 20 - 2 = 18 cells
     },
@@ -108,10 +111,10 @@ const IRREGULAR_SHAPES = {
     H: {
         rows: 5, cols: 5,
         cutouts: [
-            {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0},
-            {x: 1, y: 1}, {x: 2, y: 1}, {x: 3, y: 1},
-            {x: 1, y: 3}, {x: 2, y: 3}, {x: 3, y: 3},
-            {x: 1, y: 4}, {x: 2, y: 4}, {x: 3, y: 4}
+            { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 },
+            { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
+            { x: 1, y: 3 }, { x: 2, y: 3 }, { x: 3, y: 3 },
+            { x: 1, y: 4 }, { x: 2, y: 4 }, { x: 3, y: 4 }
         ]
         // 25 - 12 = 13 cells - only for 3 pieces
     },
@@ -124,11 +127,11 @@ const IRREGULAR_SHAPES = {
     C: {
         rows: 5, cols: 5,
         cutouts: [
-            {x: 0, y: 0},
-            {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1},
-            {x: 2, y: 2}, {x: 3, y: 2}, {x: 4, y: 2},
-            {x: 2, y: 3}, {x: 3, y: 3}, {x: 4, y: 3},
-            {x: 0, y: 4}
+            { x: 0, y: 0 },
+            { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+            { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 },
+            { x: 2, y: 3 }, { x: 3, y: 3 }, { x: 4, y: 3 },
+            { x: 0, y: 4 }
         ]
         // 25 - 11 = 14 cells - only for 3 pieces
     },
@@ -141,8 +144,8 @@ const IRREGULAR_SHAPES = {
     plus: {
         rows: 5, cols: 5,
         cutouts: [
-            {x: 0, y: 0}, {x: 4, y: 0},
-            {x: 0, y: 4}, {x: 4, y: 4}
+            { x: 0, y: 0 }, { x: 4, y: 0 },
+            { x: 0, y: 4 }, { x: 4, y: 4 }
         ]
         // 25 - 4 = 21 cells
     }
@@ -199,6 +202,10 @@ export function getDifficultyParams(level) {
     if (level >= 200) {
         // Level 200+: Need larger boards for 7 pieces (30 cells minimum)
         boardShape = Math.random() < 0.5 ? BOARD_SHAPES.largeSquare : BOARD_SHAPES.largeWide;
+    } else if (level >= 125) {
+        // Level 125+: Need medium boards for 6 pieces (~30-36 cells needed)
+        // Standard boards (24-25 cells) are too small for 6 pieces (typically 24-30 blocks)
+        boardShape = Math.random() < 0.5 ? BOARD_SHAPES.mediumSquare : BOARD_SHAPES.mediumWide;
     } else if (level < 35) {
         // Always square before milestone
         boardShape = BOARD_SHAPES.square;
