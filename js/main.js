@@ -105,6 +105,7 @@ function loop() {
 }
 
 const generationWorker = new Worker('js/worker.js', { type: 'module' });
+window.__generationWorker = generationWorker; // Expose for E2E testing
 let preGeneratedPuzzle = null;
 let isGenerating = false;
 let pendingLevelStart = null; // Callback when generation finishes
@@ -115,6 +116,7 @@ generationWorker.onmessage = function (e) {
 
     if (type === 'PUZZLE_GENERATED') {
         console.log(`[Worker] Puzzle generated for Level ${puzzle.level || '?'}`);
+        generationRetryCount = 0; // Reset on success
 
         if (pendingLevelStart) {
             // We were waiting for this!
@@ -133,14 +135,34 @@ generationWorker.onmessage = function (e) {
 
         if (pendingLevelStart) {
             // Failed while user invalidly waited
+
+            generationRetryCount++;
+            if (generationRetryCount > MAX_GENERATION_RETRIES) {
+                console.error('[Game] Max generation retries reached. Giving up.');
+                document.querySelector('#loading-overlay h2').textContent = 'GENERATION FAILED';
+                document.querySelector('#loading-overlay p').textContent = 'Please reload to try again.';
+                // document.getElementById('loading-overlay').classList.add('hidden'); // Keep it visible to show error
+                pendingLevelStart = null;
+                isGenerating = false;
+                return;
+            }
+
+            console.warn(`[Game] Generation failed (Attempt ${generationRetryCount}/${MAX_GENERATION_RETRIES}). Retrying...`);
+
             // Retry on main thread? or retry worker?
             // tailored fallback: try main thread for now to unblock
-            document.getElementById('loading-overlay').classList.add('hidden');
-            console.warn('Fallback to main thread generation');
-            pendingLevelStart = null;
+            // document.getElementById('loading-overlay').classList.add('hidden');
+            // console.warn('Fallback to main thread generation');
+            // pendingLevelStart = null;
             // In a real app we might retry the worker or show error
-            // For now, let's just re-trigger startLevel which handles retries
-            startLevel();
+            // Key fix: actually pass the config again!
+            // startLevel() relies on global state which hasn't changed, so calling it again works for retry
+            // But we need to be careful not to reset retry count immediately.
+
+            // Re-post message to worker instead of calling startLevel (which might reset things/UI)
+            const config = getDifficultyParams(level);
+            config.level = level;
+            generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
         }
     }
 };
@@ -153,6 +175,7 @@ function preGenerateNextLevel(nextLevel) {
 
     console.log(`[Worker] Pre-generating Level ${nextLevel}...`);
     isGenerating = true;
+    generationRetryCount = 0; // Reset for new attempt
     preGeneratedPuzzle = null; // Clear old
 
     const config = getDifficultyParams(nextLevel);
@@ -194,7 +217,13 @@ function startLevel() {
     // This happens on first load, or jumping levels.
     console.log(`[Game] Cache miss. Generating Level ${level} now...`);
     document.getElementById('loading-overlay').classList.remove('hidden');
+    // Prepare for generation
+    // Reset error text in case we showed failure before
+    document.querySelector('#loading-overlay h2').textContent = 'GENERATION';
+    document.querySelector('#loading-overlay p').textContent = 'Constructing tight puzzle...';
+
     isGenerating = true;
+    generationRetryCount = 0;
     pendingLevelStart = () => { };
 
     const config = getDifficultyParams(level);

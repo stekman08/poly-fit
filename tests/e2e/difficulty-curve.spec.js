@@ -129,9 +129,9 @@ test.describe('Holes', () => {
 
     test('level 75+ can have holes', async ({ page }) => {
         // Run multiple times since holes are probabilistic (12.5% at level 100)
-        // 40 tries gives >99% chance of finding one
+        // 100 tries gives >99.9999% chance of finding one (failure rate ~1.6e-6)
         let foundHole = false;
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 100; i++) {
             await startAtLevel(page, 100);
             const holeCount = await page.evaluate(() => {
                 const grid = window.game.targetGrid;
