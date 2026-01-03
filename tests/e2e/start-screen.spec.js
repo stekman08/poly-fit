@@ -71,6 +71,13 @@ test.describe('Start Screen', () => {
         await page.click('#btn-new-game');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
 
+        // New Game shows tutorial - dismiss it
+        await page.click('#btn-got-it');
+        await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
+
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
+
         const maxLevel = await page.evaluate(() => {
             return localStorage.getItem('polyfit-max-level');
         });
