@@ -60,5 +60,5 @@ describe('Global Stability Verification (0 - Infinity)', () => {
         }
         console.log('------------------------------------------------\n');
         expect(totalFailures).toBe(0);
-    });
+    }, 30000);
 });

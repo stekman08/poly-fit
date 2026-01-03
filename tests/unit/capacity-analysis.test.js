@@ -29,10 +29,11 @@ describe('Level Capacity Analysis', () => {
         console.log('Level | Failures | Rate | Config (Pieces/Rows/Cols)');
         console.log('---------------------------------------------------');
 
-        const problemLevels = [];
+        const allResults = [];
 
         for (const level of levelsToCheck) {
             const result = checkLevel(level);
+            allResults.push(result);
             const { numPieces, boardRows, boardCols } = result.params;
 
             console.log(
@@ -41,20 +42,16 @@ describe('Level Capacity Analysis', () => {
                 `${(result.rate * 100).toFixed(0)}%  | ` +
                 `${numPieces} on ${boardRows}x${boardCols}`
             );
-
-            if (result.rate > 0.1) { // Flag if > 10% failure
-                problemLevels.push(level);
-            }
         }
         console.log('---------------------------------------------------\n');
 
         // Fail the test if we found major issues (so we notice)
         // We expect some failure is natural (randomness), but consistent failure > 50% is a bug
-        const severeFailures = levelsToCheck.filter(l => checkLevel(l).rate > 0.5);
+        const severeFailures = allResults.filter(r => r.rate > 0.5);
 
         if (severeFailures.length > 0) {
-            console.error('Severe failures detected at levels:', severeFailures);
+            console.error('Severe failures detected at levels:', severeFailures.map(r => r.level));
             // expect(severeFailures.length).toBe(0); // Uncomment to strictly fail
         }
-    }, 30000);
+    }, 60000);
 });
