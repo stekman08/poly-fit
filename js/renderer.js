@@ -48,7 +48,7 @@ export class Renderer {
         this.canvas.height = this.height;
 
         // Minimum header offset to prevent board overlapping "LEVEL X" text
-        const MIN_HEADER_OFFSET = 80;
+        const MIN_HEADER_OFFSET = 120;
 
         // Vertical Layout Requirements:
         // Header: MIN_HEADER_OFFSET pixels (fixed)
