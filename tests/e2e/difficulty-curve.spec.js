@@ -66,9 +66,9 @@ test.describe('Board Shapes', () => {
         });
 
         const cells = boardSize.rows * boardSize.cols;
-        expect(cells).toBe(30); // 6x5 or 5x6
-        expect([5, 6]).toContain(boardSize.rows);
-        expect([5, 6]).toContain(boardSize.cols);
+        expect(cells).toBe(42); // 7x6 or 6x7
+        expect([6, 7]).toContain(boardSize.rows);
+        expect([6, 7]).toContain(boardSize.cols);
     });
 });
 
