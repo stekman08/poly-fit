@@ -19,6 +19,8 @@ test.describe('Piece Count by Level', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(3);
@@ -34,6 +36,8 @@ test.describe('Piece Count by Level', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(4);
@@ -49,6 +53,8 @@ test.describe('Piece Count by Level', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(5);
@@ -64,6 +70,8 @@ test.describe('Piece Count by Level', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(6);
@@ -79,6 +87,8 @@ test.describe('Piece Count by Level', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const pieceCount = await page.evaluate(() => window.game.pieces.length);
         expect(pieceCount).toBe(7);

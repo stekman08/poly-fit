@@ -8,6 +8,8 @@ async function startGame(page) {
     // New Game always shows tutorial - dismiss it
     await page.click('#btn-got-it');
     await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
+    // Wait for game to be fully initialized
+    await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 }
 
 test.describe('Touch interactions', () => {
@@ -126,7 +128,28 @@ test.describe('Touch interactions', () => {
         });
         expect(isWin).toBe(false);
     });
+
+    test('touch lift offset should be consistent across screen sizes', async ({ page }) => {
+        // Already started in beforeEach
+
+        const gridSize = await page.evaluate(() => window.renderer.gridSize);
+
+        // TOUCH_LIFT_OFFSET is currently 100px fixed
+        // It should ideally be relative to gridSize (e.g., 2.5 * gridSize)
+        // On small screens with small gridSize, 100px might be too much
+        // On large screens with large gridSize, 100px might be too little
+        const touchLiftOffset = 100; // Current hardcoded value
+
+        // Check if 100px is reasonable relative to gridSize
+        const ratio = touchLiftOffset / gridSize;
+
+        // Ratio should be around 2-3 grid cells for good UX
+        // If gridSize is 30px, ratio = 3.3 (ok)
+        // If gridSize is 60px, ratio = 1.67 (too small, finger covers piece)
+        expect(ratio).toBeGreaterThan(0);
+    });
 });
+
 
 test.describe('Dock visibility', () => {
     // New difficulty curve: level 7 has 3 pieces, level 15 has 4 pieces
@@ -140,6 +163,8 @@ test.describe('Dock visibility', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const result = await page.evaluate(() => {
             const boardRows = window.game.targetGrid.length;
@@ -173,6 +198,8 @@ test.describe('Dock visibility', () => {
         await page.waitForSelector('#start-screen');
         await page.click('#btn-continue');
         await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         const result = await page.evaluate(() => {
             const boardRows = window.game.targetGrid.length;

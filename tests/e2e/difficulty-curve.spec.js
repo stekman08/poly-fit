@@ -17,7 +17,44 @@ async function startAtLevel(page, level) {
     await page.waitForSelector('#start-screen');
     await page.click('#btn-continue');
     await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
+    // Wait for game to be initialized (worker to return puzzle)
+    await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 }
+
+test.describe('High Level Generation Strategy', () => {
+    test('high level puzzle generation should not fail (level 250)', async ({ page }) => {
+        // Test level 250 which has 7 pieces and irregular shapes
+        await startAtLevel(page, 250);
+
+        const result = await page.evaluate(() => {
+            return {
+                hasGame: window.game !== null,
+                pieceCount: window.game ? window.game.pieces.length : 0,
+                hasGrid: window.game && window.game.targetGrid && window.game.targetGrid.length > 0
+            };
+        });
+
+        expect(result.hasGame).toBe(true);
+        expect(result.pieceCount).toBeGreaterThan(0);
+        expect(result.hasGrid).toBe(true);
+    });
+
+    test('multiple high level puzzles generate successfully', async ({ page }) => {
+        for (let i = 0; i < 3; i++) {
+            await startAtLevel(page, 250 + i * 10);
+
+            const result = await page.evaluate(() => {
+                return {
+                    hasGame: window.game !== null,
+                    pieceCount: window.game ? window.game.pieces.length : 0
+                };
+            });
+
+            expect(result.hasGame).toBe(true);
+            expect(result.pieceCount).toBeGreaterThan(0);
+        }
+    });
+});
 
 test.describe('Board Shapes', () => {
     test('level 1-34 always has 5x5 square board', async ({ page }) => {

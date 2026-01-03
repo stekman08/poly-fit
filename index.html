@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
     <title>PolyFit - Neon Puzzle</title>
 
     <!-- PWA Meta Tags -->
@@ -34,10 +36,10 @@
 
     <!-- Touch detection - runs early to avoid flash -->
     <script>
-        (function() {
+        (function () {
             const hasTouch = 'ontouchstart' in window ||
-                             navigator.maxTouchPoints > 0 ||
-                             window.matchMedia('(pointer: coarse)').matches;
+                navigator.maxTouchPoints > 0 ||
+                window.matchMedia('(pointer: coarse)').matches;
 
             if (!hasTouch) {
                 // No touch - show desktop message, hide game
@@ -47,10 +49,16 @@
     </script>
     <style>
         /* Hide game container on no-touch devices */
-        .no-touch #game-container { display: none !important; }
-        .no-touch #desktop-message { display: flex !important; }
+        .no-touch #game-container {
+            display: none !important;
+        }
+
+        .no-touch #desktop-message {
+            display: flex !important;
+        }
     </style>
 </head>
+
 <body>
 
     <!-- Desktop/No-touch message -->
@@ -142,6 +150,13 @@
         </div>
     </div>
 
+    <div id="loading-overlay" class="overlay hidden">
+        <div class="modal">
+            <h2 class="neon-text">GENERATING...</h2>
+            <p>Constructing tight puzzle...</p>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 
     <!-- Service Worker Registration with Auto-Update -->
@@ -187,7 +202,7 @@
     </script>
 
     <!-- Analytics (privacy-friendly, no cookies) -->
-    <script data-goatcounter="https://stekman08.goatcounter.com/count"
-            async src="//gc.zgo.at/count.js"></script>
+    <script data-goatcounter="https://stekman08.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
+
 </html>

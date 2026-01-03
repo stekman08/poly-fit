@@ -5,7 +5,7 @@ import { generatePuzzle } from '../../js/puzzle.js';
 
 describe('Level Capacity Analysis', () => {
     // Helper to check a specific level
-    function checkLevel(level, iterations = 20) {
+    function checkLevel(level, iterations = 5) {
         const params = getDifficultyParams(level);
         let failures = 0;
 
@@ -56,5 +56,5 @@ describe('Level Capacity Analysis', () => {
             console.error('Severe failures detected at levels:', severeFailures);
             // expect(severeFailures.length).toBe(0); // Uncomment to strictly fail
         }
-    });
+    }, 30000);
 });

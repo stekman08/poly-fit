@@ -20,6 +20,8 @@ test.describe('Practice Mode', () => {
         await page.waitForFunction(() =>
             document.querySelector('#level-select-screen').classList.contains('hidden')
         );
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         // Verify we're on level 5
         const levelText = await page.locator('#level-display').textContent();
@@ -45,6 +47,8 @@ test.describe('Practice Mode', () => {
         await page.waitForFunction(() =>
             document.querySelector('#level-select-screen').classList.contains('hidden')
         );
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         // Solve puzzle by placing each piece at its solution position
         await page.evaluate(() => {
@@ -89,6 +93,8 @@ test.describe('Practice Mode', () => {
         await page.waitForFunction(() =>
             document.querySelector('#level-select-screen').classList.contains('hidden')
         );
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         // Solve puzzle
         await page.evaluate(() => {

@@ -77,6 +77,9 @@ test.describe('Level Select', () => {
         await page.waitForFunction(() =>
             document.querySelector('#level-select-screen').classList.contains('hidden')
         );
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
+
         const levelText = await page.locator('#level-display').textContent();
         expect(levelText).toContain('LEVEL 7');
     });

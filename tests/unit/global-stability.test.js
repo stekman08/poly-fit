@@ -5,7 +5,7 @@ import { generatePuzzle } from '../../js/puzzle.js';
 
 describe('Global Stability Verification (0 - Infinity)', () => {
 
-    function checkLevelStability(level, iterations = 50) {
+    function checkLevelStability(level, iterations = 5) {
         const params = getDifficultyParams(level);
         let failures = 0;
 

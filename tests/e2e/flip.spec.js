@@ -7,6 +7,8 @@ async function startGame(page) {
     await page.waitForFunction(() => document.querySelector('#start-screen').classList.contains('hidden'));
     await page.click('#btn-got-it');
     await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
+    // Wait for game to be fully initialized
+    await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 }
 
 test.describe('Flip Mechanic', () => {

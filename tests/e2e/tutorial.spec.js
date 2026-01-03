@@ -146,6 +146,8 @@ test.describe('Tutorial', () => {
         await page.click('#btn-new-game');
         await page.click('#btn-got-it');
         await page.waitForFunction(() => document.querySelector('#tutorial-overlay').classList.contains('hidden'));
+        // Wait for game to be fully initialized
+        await page.waitForFunction(() => window.game && window.game.targetGrid && window.game.pieces.length > 0);
 
         // Get piece count before interaction
         const piecesBefore = await page.evaluate(() =>
