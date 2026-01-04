@@ -1,12 +1,10 @@
-
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
 import { GRID_ROWS, GRID_COLS } from './config/constants.js';
 import { selectPiecesWithBias, IRREGULAR_SHAPES } from './config/difficulty.js';
 import { countSolutions } from './solver.js';
+import { shuffleArray, createGrid } from './utils.js';
 
-export function createGrid(rows = 6, cols = 6) {
-    return Array(rows).fill(0).map(() => Array(cols).fill(0));
-}
+export { createGrid };
 
 // Grid cell values:
 // -2 = outside (cutout, not part of board) - rendered as background
@@ -64,15 +62,6 @@ export function placePiece(grid, shape, startX, startY, value = 1) {
 // Helper to get random item from array
 function getRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// Shuffle array in place (Fisher-Yates)
-function shuffleArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
 }
 
 // Check if shape at position is adjacent to existing pieces

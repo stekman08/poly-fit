@@ -119,27 +119,14 @@ export class Game {
             const shape = piece.currentShape;
 
             for (const block of shape) {
-                // Determine grid coordinates
-                // We assume piece.x/y are in Grid Units relative to targetGrid top-left
-                // In the actual game, we'll need to snap visual coords to these grid coords.
                 const gx = piece.x + block.x;
                 const gy = piece.y + block.y;
 
-                // Check bounds of the target grid
-                // If a piece is outside, we can't be winning (unless target implies outside?)
-                // Usually target is fully contained in the grid bounds.
+                // Bounds check - all blocks must be within grid
                 if (gy >= 0 && gy < rows && gx >= 0 && gx < cols) {
                     currentGrid[gy][gx] += 1;
                 } else {
-                    // Piece is strictly partly outside the bounds check area.
-                    // Depending on game rules, this might be fail.
-                    // But effectively, if it's outside, it won't match a target-1 cell, OR it's extraneous.
-                    // Let's count it or track it.
-                    // If we just ignore it, we might get a false positive if target is solved but extra piece is hiding outside?
-                    // No, because we check ALL pieces must be used?
-                    // PolyFit rules: fill the shape with exact set of pieces.
-                    // So every block of every piece must be in a VALID target spot.
-                    return false;
+                    return false; // Part of piece outside board
                 }
             }
         }

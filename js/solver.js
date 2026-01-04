@@ -107,16 +107,7 @@ function solveRecursive(targetGrid, pieces, usedPiecesMask, occupiedMask, limit,
     }
 
     if (!found) {
-        // No empty target cells left.
-        // If we still have pieces to place, it's an invalid state (should cover all target cells)
-        // Wait, does pieces area = target area?
-        // Yes, usually. But if not, we can't place remaining pieces?
-        // If placedCount < pieces.length, return 0.
-        // However, standard Puzzles in this game: Target Area == Sum of Piece Areas.
-        // So checking placedCount is sufficient?
-        // Actually, if !found, it implies board is full.
-        // If placedCount < pieces.length, we failed (pieces overlap or outside? no, occupiedMask handles overlap).
-        // It means pieces left over.
+        // No empty target cells - if pieces remain, placement failed
         return 0;
     }
 

@@ -1,25 +1,10 @@
 /**
  * Difficulty configuration - calculates puzzle parameters based on level
- *
- * Design principles (based on game design research):
- * - Introduce ONE new mechanic at a time
- * - Scale back other difficulty when introducing something new
- * - Use logarithmic curves (fast early increase, plateaus later)
- * - Boredom kills more than difficulty (57% quit from boredom vs 27% from difficulty)
- *
- * Milestones:
- * - Level 15: 4 pieces
- * - Level 35: Wide/tall boards introduced
- * - Level 50: 5 pieces
- * - Level 60: Irregular shapes (L, T, cross) introduced
- * - Level 75: Holes introduced
- * - Level 100: Extreme shapes (3×8, 8×3) introduced
- * - Level 125: 6 pieces
- * - Level 150: 2 holes possible
- * - Level 175: Hard pieces dominate
- * - Level 200: 7 pieces
- * - Level 200+: Logarithmic increase continues
+ * Uses logarithmic curves: fast early increase, plateaus later.
+ * Milestones: L15→4pcs, L35→shapes, L50→5pcs, L60→irregular, L75→holes, L100→extreme, L125→6pcs, L200→7pcs
  */
+
+import { shuffleArray } from '../utils.js';
 
 // Board shape templates - {rows, cols} that roughly fit the same area
 const BOARD_SHAPES = {
@@ -366,13 +351,4 @@ export function selectPiecesWithBias(numPieces, asymmetricBias, availableShapes)
     }
 
     return selected;
-}
-
-// Fisher-Yates shuffle
-function shuffleArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
 }

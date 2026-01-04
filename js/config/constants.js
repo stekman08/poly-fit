@@ -20,7 +20,6 @@ export function getMaxDockY(boardRows) {
 }
 
 export const DOCK_PIECE_SCALE = 0.5;  // Scale pieces down in dock (50%)
-export const BOARD_PIECE_SCALE = 1.0; // Full size on board
 export const GHOST_ALPHA = 0.4;       // Shadow/preview transparency on board
 
 // Gesture detection thresholds
