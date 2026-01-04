@@ -97,4 +97,46 @@ test.describe('Loading State and Error Handling', () => {
         // Verify the UI updates to show failure message
         await expect(page.locator('#loading-overlay h2')).toHaveText('GENERATION FAILED', { timeout: 30000 });
     });
+
+    test('regression: loading overlay should not block interaction after hiding', async ({ page }) => {
+        await page.goto('/');
+
+        // Mock worker for speed and stability
+        await page.evaluate(() => {
+            const mockPuzzle = {
+                level: 1,
+                boardRows: 5,
+                boardCols: 5,
+                targetGrid: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]],
+                pieces: [{ id: 1, shape: [[1]], originalShape: [[1]], color: '#f00', solutionX: 0, solutionY: 0, solutionRotation: 0, solutionFlipped: false }]
+            };
+            const realWorker = window.__generationWorker;
+            realWorker.postMessage = function (data) {
+                if (data.type === 'GENERATE') {
+                    setTimeout(() => {
+                        realWorker.onmessage({ data: { type: 'PUZZLE_GENERATED', puzzle: mockPuzzle, reqId: data.reqId } });
+                    }, 10);
+                }
+            };
+        });
+
+        // Trigger generation
+        await page.click('#btn-new-game');
+        await page.click('#btn-got-it');
+
+        // Wait for overlay to hide
+        const overlay = page.locator('#loading-overlay');
+        await expect(overlay).toHaveClass(/hidden/);
+
+        // STH: Verify strictly that it is not visible to user (checks display, visibility, opacity)
+        await expect(overlay).toBeHidden();
+
+        // STRICT INTERACTION CHECK:
+        // Try to click the Menu button immediately.
+        // If overlay is present (even with opacity 0), this standard click will fail/timeout.
+        await page.click('#btn-menu');
+
+        // Success: Menu opened
+        await expect(page.locator('#start-screen')).toBeVisible();
+    });
 });
