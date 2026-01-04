@@ -26,23 +26,26 @@ try {
     const versionJsonPath = path.join(__dirname, '../version.json');
     fs.writeFileSync(versionJsonPath, JSON.stringify(versionInfo, null, 2));
 
-    // Update sw.js with version comment to trigger browser update
-    const swPath = path.join(__dirname, '../sw.js');
-    let swContent = fs.readFileSync(swPath, 'utf8');
-    const versionComment = `// Version: ${versionInfo.displayWithTime}`;
+    // Update sw.js only if flag is present (avoid local diffs)
+    if (process.argv.includes('--update-sw')) {
+        const swPath = path.join(__dirname, '../sw.js');
+        let swContent = fs.readFileSync(swPath, 'utf8');
+        const versionComment = `// Version: ${versionInfo.displayWithTime}`;
 
-    // Replace first line or prepend if not present
-    const lines = swContent.split('\n');
-    if (lines[0].startsWith('// Version:')) {
-        lines[0] = versionComment;
+        const lines = swContent.split('\n');
+        if (lines[0].startsWith('// Version:')) {
+            lines[0] = versionComment;
+        } else {
+            lines.unshift(versionComment);
+        }
+        swContent = lines.join('\n');
+        fs.writeFileSync(swPath, swContent);
+        console.log(`✓ Service Worker updated with version comment`);
     } else {
-        lines.unshift(versionComment);
+        console.log(`ℹ Skipping Service Worker update (pass --update-sw to update)`);
     }
-    swContent = lines.join('\n');
-    fs.writeFileSync(swPath, swContent);
 
     console.log(`✓ Version generated: ${versionInfo.displayFull}`);
-    console.log(`✓ Service Worker updated with version comment`);
 } catch (error) {
     // Fallback if not in a git repo (e.g., deployed without .git)
     const fallbackVersion = {
