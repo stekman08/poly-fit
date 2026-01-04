@@ -120,8 +120,8 @@ test('header menu button returns to start screen', async ({ page }) => {
 
     await expect(page.locator('#start-screen')).toHaveClass(/hidden/);
 
-    // Click menu - use JS evaluation to guarantee event trigger regardless of overlays/animations
-    await page.evaluate(() => document.getElementById('btn-menu').click());
+    // Click menu - standard click to verify element is reachable and actionable
+    await page.click('#btn-menu');
 
     // Should see start screen
     await expect(page.locator('#start-screen')).not.toHaveClass(/hidden/);
