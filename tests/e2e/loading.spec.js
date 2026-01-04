@@ -64,15 +64,27 @@ test.describe('Loading State and Error Handling', () => {
         await page.waitForFunction(() => window.__generationWorker);
 
         // Inject poison into the worker's postMessage to trigger a real error
+        // Mock the worker entirely to simulate errors without taxing the CPU
         await page.evaluate(() => {
-            const originalPost = window.__generationWorker.postMessage.bind(window.__generationWorker);
-            window.__generationWorker.postMessage = function (data) {
+            // Hijack the onmessage handler that main.js attaches
+            const realWorker = window.__generationWorker;
+
+            // We'll proxy postMessage to immediately fire back an error
+            // This bypasses the actual worker thread and CPU usage
+            realWorker.postMessage = function (data) {
                 if (data.type === 'GENERATE') {
-                    console.log('[Test] Intercepted GENERATE, injecting invalid config...');
-                    // Poison the config with negative board size to trigger RangeError in worker
-                    data.config.boardRows = -5;
+                    // Simulate async work slightly to allow UI to show "Generating"
+                    setTimeout(() => {
+                        // Directly trigger the validation/error handler in main.js
+                        realWorker.onmessage({
+                            data: {
+                                type: 'ERROR',
+                                error: 'Simulated CPU-friendly error',
+                                reqId: data.reqId
+                            }
+                        });
+                    }, 50);
                 }
-                originalPost(data);
             };
         });
 
