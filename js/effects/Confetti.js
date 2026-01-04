@@ -2,20 +2,13 @@
  * Neon confetti effect for win celebration
  */
 
-const NEON_COLORS = [
-    '#FF00FF', // Magenta
-    '#00FFFF', // Cyan
-    '#00FF00', // Green
-    '#FFFF00', // Yellow
-    '#FF0000', // Red
-    '#7F00FF', // Purple
-];
+import { COLORS } from '../shapes.js';
 
 class Particle {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.color = NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)];
+        this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
         this.size = Math.random() * 8 + 4;
         this.speedX = (Math.random() - 0.5) * 12;
         this.speedY = Math.random() * -15 - 5;

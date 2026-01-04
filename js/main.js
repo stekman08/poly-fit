@@ -149,17 +149,7 @@ generationWorker.onmessage = function (e) {
 
             console.warn(`[Game] Generation failed (Attempt ${generationRetryCount}/${MAX_GENERATION_RETRIES}). Retrying...`);
 
-            // Retry on main thread? or retry worker?
-            // tailored fallback: try main thread for now to unblock
-            // document.getElementById('loading-overlay').classList.add('hidden');
-            // console.warn('Fallback to main thread generation');
-            // pendingLevelStart = null;
-            // In a real app we might retry the worker or show error
-            // Key fix: actually pass the config again!
-            // startLevel() relies on global state which hasn't changed, so calling it again works for retry
-            // But we need to be careful not to reset retry count immediately.
-
-            // Re-post message to worker instead of calling startLevel (which might reset things/UI)
+            // Re-post message to worker for retry
             const config = getDifficultyParams(level);
             config.level = level;
             generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
@@ -557,7 +547,4 @@ if (startTitle && !startTitle.hasAttribute('data-theme-listener')) {
     startTitle.addEventListener('click', cycleTheme);
 }
 
-setupCheatCode();
-loadTheme();
-showStartScreen();
 loop();
