@@ -6,19 +6,63 @@ test('secret hint trigger works with tap sequence', async ({ page }) => {
     await page.goto('/');
 
     // Start game
+    // Start game
+    // Inject mock worker logic to prevent CPU starvation timeouts
+    // Wait for worker to be available to avoid race condition
+    await page.waitForFunction(() => window.__generationWorker);
+
+    await page.evaluate(() => {
+        const mockPuzzle = {
+            level: 1,
+            boardRows: 5,
+            boardCols: 5,
+            targetGrid: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]],
+            pieces: [{
+                id: 1,
+                shape: [[1]],
+                originalShape: [[1]],
+                color: '#ff0000',
+                solutionX: 0,
+                solutionY: 0,
+                solutionRotation: 0,
+                solutionFlipped: false
+            }]
+        };
+
+        // Hijack the onmessage handler
+        const realWorker = window.__generationWorker;
+        const originalPost = realWorker.postMessage.bind(realWorker);
+
+        realWorker.postMessage = function (data) {
+            if (data.type === 'GENERATE') {
+                console.log('[Test] Mocking puzzle generation');
+                // Instant success response
+                setTimeout(() => {
+                    realWorker.onmessage({
+                        data: {
+                            type: 'PUZZLE_GENERATED',
+                            puzzle: mockPuzzle,
+                            reqId: data.reqId
+                        }
+                    });
+                }, 10);
+            } else {
+                originalPost(data);
+            }
+        };
+    });
+
+    // Start game - this triggers the tutorial
     await page.click('#btn-new-game');
 
-    // Dismiss tutorial if present
-    const gotItBtn = page.locator('#btn-got-it');
-    if (await gotItBtn.isVisible()) {
-        await gotItBtn.click();
-    }
+    // Dismiss tutorial - mandatory wait and click because new-game ALWAYS shows it
+    await page.click('#btn-got-it');
 
-    // Wait for generation to complete
-    await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/, { timeout: 15000 });
+    // Wait for generation to complete (should be instant now)
+    await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/, { timeout: 10000 });
 
-    // Wait for game to be ready (increased timeout for slow CI/parallel execution)
-    await page.waitForFunction(() => window.game && window.game.pieces.length > 0, null, { timeout: 60000 });
+    // Wait for game to be ready
+    await page.waitForFunction(() => window.game && window.game.pieces.length > 0);
 
     // Verify hint hidden initially
     const pieces = await page.evaluate(() => window.game.pieces);
@@ -66,10 +110,7 @@ test('header menu button returns to start screen', async ({ page }) => {
     await page.click('#btn-new-game');
 
     // Dismiss tutorial
-    const gotItBtn = page.locator('#btn-got-it');
-    if (await gotItBtn.isVisible()) {
-        await gotItBtn.click();
-    }
+    await page.click('#btn-got-it');
 
     // Wait for generation to complete
     await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/, { timeout: 15000 });
