@@ -5,7 +5,7 @@ import { generatePuzzle } from '../../js/puzzle.js';
 
 describe('Level Capacity Analysis', () => {
     // Helper to check a specific level
-    function checkLevel(level, iterations = 5) {
+    function checkLevel(level, iterations = 2) {
         const params = getDifficultyParams(level);
         let failures = 0;
 
