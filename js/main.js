@@ -382,6 +382,8 @@ function cycleTheme() {
     haptics.vibrateRotate(); // Subtle feedback
 }
 
+
+// Load saved theme
 function loadTheme() {
     const savedTheme = safeGetItem(THEME_STORAGE_KEY);
     if (savedTheme) {
@@ -392,6 +394,80 @@ function loadTheme() {
         }
     }
 }
+
+// Secret Hint Cheat Code
+// Sequence: Title(1) -> Level(2) -> Title(3) -> Level(4)
+function setupCheatCode() {
+    const SEQUENCE = [
+        { target: 'TITLE', count: 1 },
+        { target: 'LEVEL', count: 2 },
+        { target: 'TITLE', count: 3 },
+        { target: 'LEVEL', count: 4 }
+    ];
+
+    let currentStep = 0;
+    let currentCount = 0;
+    let resetTimer = null;
+    const RESET_DELAY = 1500;
+
+    const titleEl = document.getElementById('title-display');
+    const levelEl = document.getElementById('level-display');
+
+    if (!titleEl || !levelEl) return;
+
+    function reset() {
+        currentStep = 0;
+        currentCount = 0;
+        if (resetTimer) clearTimeout(resetTimer);
+    }
+
+    function checkTap(targetName) {
+        if (resetTimer) clearTimeout(resetTimer);
+        resetTimer = setTimeout(reset, RESET_DELAY);
+
+        const expected = SEQUENCE[currentStep];
+
+        // Wrong target logic
+        if (targetName !== expected.target) {
+            // Special case: If tapping Title, checking if it starts a new sequence
+            if (targetName === SEQUENCE[0].target) {
+                currentStep = 0;
+                currentCount = 1;
+                haptics.vibrateRotate(); // Feedback for restart
+                return;
+            }
+            reset();
+            return;
+        }
+
+        // Correct target
+        currentCount++;
+        haptics.vibrateRotate(); // Feedback on every correct tap
+
+        if (currentCount === expected.count) {
+            // Step complete
+            currentStep++;
+            currentCount = 0;
+
+            if (currentStep >= SEQUENCE.length) {
+                // Sequence complete!
+                console.log('Cheat Activated: Force Hint');
+                lastInteractionTime = 0;
+                haptics.vibrateWin();
+                reset();
+            }
+        }
+    }
+
+    titleEl.addEventListener('click', (e) => { e.stopPropagation(); checkTap('TITLE'); });
+    levelEl.addEventListener('click', (e) => { e.stopPropagation(); checkTap('LEVEL'); });
+}
+
+// Initialize
+setupCheatCode();
+loadTheme();
+// cycleTheme(); // Removed: This was changing color at start, breaking tests
+showStartScreen();
 
 function showStartScreen() {
     if (maxLevel > 1) {
@@ -466,6 +542,12 @@ btnGotIt.addEventListener('click', hideTutorial);
 
 btnLevelSelect.addEventListener('click', showLevelSelect);
 btnBack.addEventListener('click', hideLevelSelect);
+const btnMenu = document.getElementById('btn-menu');
+if (btnMenu) {
+    btnMenu.addEventListener('click', () => {
+        showStartScreen();
+    });
+}
 
 // Title tap to cycle themes (with guard against duplicate listeners)
 const startTitle = document.querySelector('.start-modal .neon-text');
@@ -475,6 +557,7 @@ if (startTitle && !startTitle.hasAttribute('data-theme-listener')) {
     startTitle.addEventListener('click', cycleTheme);
 }
 
+setupCheatCode();
 loadTheme();
 showStartScreen();
 loop();

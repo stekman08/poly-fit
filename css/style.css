@@ -73,6 +73,27 @@ body {
 #header {
     text-align: center;
     pointer-events: auto;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#btn-menu {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 8px 12px;
+    font-size: 1.2rem;
+    min-width: auto;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+#btn-menu:active {
+    background: var(--neon-blue);
+    color: #000;
 }
 
 .neon-text {
