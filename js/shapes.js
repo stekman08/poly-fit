@@ -79,12 +79,12 @@ export const SHAPES = {
 };
 
 export const COLORS = [
-    '#FF00FF', // Neon Magenta
-    '#00FFFF', // Neon Cyan
-    '#00FF00', // Neon Green
-    '#FFFF00', // Neon Yellow
-    '#FF0000', // Neon Red
-    '#7F00FF', // Neon Purple
-    '#FF7F00', // Neon Orange
-    '#FFFFFF', // Neon White
+    '#F92672', // Neon Pink
+    '#00E5FF', // Cyan
+    '#A6E22E', // Lime
+    '#FD971F', // Orange
+    '#AE81FF', // Purple
+    '#E6DB74', // Mellow Yellow
+    '#FF3333', // Red
+    '#F8F8F2', // White
 ];

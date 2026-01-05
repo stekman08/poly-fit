@@ -1,5 +1,5 @@
-
 import { rotateShape, flipShape, normalizeShape } from './shapes.js';
+import { createGrid } from './utils.js';
 
 /**
  * optimized solver to count solutions for a given puzzle configuration
@@ -39,13 +39,6 @@ function getUniqueOrientations(baseShape) {
 
     orientationCache.set(sigKey, uniques);
     return uniques;
-}
-
-/**
- * Create a simple 2D array grid from dimensions
- */
-function createGrid(rows, cols) {
-    return Array(rows).fill(0).map(() => Array(cols).fill(0));
 }
 
 /**

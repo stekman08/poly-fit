@@ -19,25 +19,19 @@ export function getMaxDockY(boardRows) {
     return boardRows + DOCK_GAP + DOCK_ROWS - 1;
 }
 
-export const DOCK_PIECE_SCALE = 0.5;  // Scale pieces down in dock (50%)
-export const GHOST_ALPHA = 0.4;       // Shadow/preview transparency on board
-
 // Gesture detection thresholds
 export const TAP_MAX_DISTANCE = 10;      // pixels - max movement for tap
 export const TAP_MAX_DURATION = 300;     // ms - max duration for tap
 export const SWIPE_MIN_DISTANCE = 30;    // pixels - min movement for swipe
 export const SWIPE_MAX_DURATION = 300;   // ms - max duration for swipe (must be fast)
 
-// Mobile UX
-// TOUCH_LIFT_OFFSET moved to input.js as TOUCH_LIFT_GRID_CELLS (now relative to gridSize)
-
-// Difficulty scaling
-export const LEVEL_3_PIECE_MAX = 3;      // levels 1-3: 3 pieces
-export const LEVEL_14_PIECE_MAX = 14;    // levels 4-14: 4 pieces
-export const LEVEL_49_PIECE_MAX = 49;    // levels 15-49: 5 pieces
-export const LEVEL_99_PIECE_MAX = 99;    // levels 50-99: 6 pieces
-// Level 100+: 7 pieces
+// Touch handling
+export const FAT_FINGER_RADIUS = 45;     // pixels - hit detection radius for touch
+export const TOUCH_MOUSE_DEBOUNCE = 500; // ms - ignore mouse after touch
 
 // Timing
-export const WIN_OVERLAY_DELAY = 300;    // ms - delay before showing win overlay
 export const HINT_DELAY = 300000;        // ms - show hint after 5 minutes inactivity
+export const WIN_TRANSITION_DELAY = 600; // ms - delay before next level after win
+
+// Puzzle generation
+export const MAX_GENERATION_RETRIES = 2000; // max attempts before giving up

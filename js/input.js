@@ -7,80 +7,104 @@ import {
     TAP_MAX_DURATION,
     SWIPE_MIN_DISTANCE,
     SWIPE_MAX_DURATION,
+    FAT_FINGER_RADIUS,
+    TOUCH_MOUSE_DEBOUNCE,
     getDockY,
-    getMaxDockY,
-    DOCK_PIECE_SCALE
+    getMaxDockY
 } from './config/constants.js';
 
-// Touch lift offset multiplier (in grid cells)
-// Lifts the piece above the finger by this many grid cells
-const TOUCH_LIFT_GRID_CELLS = 2.5;
-
+/**
+ * Simplified InputHandler for DOM-based rendering
+ * Key differences from canvas version:
+ * - No visualDragOffset (finger lift) - not needed for DOM
+ * - Piece doesn't move until actual drag detected (tap works properly)
+ * - Uses DOM element positions directly
+ */
 export class InputHandler {
     constructor(game, renderer, onInteraction) {
         this.game = game;
         this.renderer = renderer;
-        this.canvas = renderer.canvas;
-        this.onInteraction = onInteraction; // callback to request render/check win
+        this.container = document.getElementById('game-container');
+        this.onInteraction = onInteraction;
 
+        // Drag state
         this.draggingPiece = null;
-        this.dragOffset = { x: 0, y: 0 }; // Offset from top-left of piece to cursor
-        this.dragStartPos = { x: 0, y: 0 }; // For gesture detection
+        this.isDragging = false; // True only after movement threshold exceeded
+        this.dragStartPos = { x: 0, y: 0 };
         this.dragStartTime = 0;
-        this.activeTouchId = null; // Track which touch is dragging
+        this.activeTouchId = null;
+        this.hasInteraction = false;
 
-        // Mobile offset config
-        this.visualDragOffset = 0; // Pixels to shift piece UP when dragging
+        // Prevent mouse events from firing after touch events (browser compatibility behavior)
+        this.lastTouchTime = 0;
+
+        // Offset from piece origin to touch point
+        this.touchOffset = { x: 0, y: 0 };
 
         this.bindEvents();
     }
 
-    // Get board rows from current grid
     getBoardRows() {
         return this.game.targetGrid?.length || 5;
     }
 
     bindEvents() {
-        // Touch
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            // Use the touch that just started (changedTouches), not all touches
+        // Touch events
+        this.container.addEventListener('touchstart', (e) => {
+            this.lastTouchTime = Date.now();
+            const isUIElement = e.target.closest('#ui-layer, #start-screen, #tutorial-overlay, #win-overlay, #level-select-screen, #loading-overlay');
+            if (isUIElement && !e.target.closest('.piece')) {
+                return;
+            }
             const touch = e.changedTouches[0];
-            this.handleStart(touch, true, touch.identifier);
-        }, { passive: false });
+            this.handleStart(touch.clientX, touch.clientY, true, touch.identifier);
+        }, { passive: true });
+
         window.addEventListener('touchmove', (e) => {
-            if (this.draggingPiece) e.preventDefault();
-            // Find our tracked touch by identifier
-            const touch = this.findTouchById(e.touches, this.activeTouchId);
-            if (touch) {
-                this.handleMove(touch, true);
+            if (this.draggingPiece) {
+                const touch = this.findTouchById(e.touches, this.activeTouchId);
+                if (touch) {
+                    this.handleMove(touch.clientX, touch.clientY);
+                }
             }
-        }, { passive: false });
+        }, { passive: true });
+
         window.addEventListener('touchend', (e) => {
-            // Check if our tracked touch ended
-            const touch = this.findTouchById(e.changedTouches, this.activeTouchId);
-            if (touch) {
-                this.handleEnd(e);
+            this.lastTouchTime = Date.now();
+            if (this.draggingPiece) {
+                const touch = e.changedTouches[0];
+                this.handleEnd(touch?.clientX ?? this.dragStartPos.x, touch?.clientY ?? this.dragStartPos.y);
             }
-        }, { passive: false });
+        }, { passive: true });
 
-        // Mouse
-        this.canvas.addEventListener('mousedown', (e) => this.handleStart(e, false));
-        window.addEventListener('mousemove', (e) => this.handleMove(e, false));
-        window.addEventListener('mouseup', (e) => this.handleEnd(e));
+        window.addEventListener('touchcancel', () => {
+            if (this.draggingPiece) {
+                this.cancelDrag();
+            }
+        }, { passive: true });
 
+        // Mouse events - ignore if triggered by touch compatibility
+        this.container.addEventListener('mousedown', (e) => {
+            // Ignore mouse events after touch (browser compatibility behavior)
+            if (Date.now() - this.lastTouchTime < TOUCH_MOUSE_DEBOUNCE) {
+                return;
+            }
+            this.handleStart(e.clientX, e.clientY, false);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (this.draggingPiece) {
+                this.handleMove(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (this.draggingPiece) {
+                this.handleEnd(e.clientX, e.clientY);
+            }
+        });
     }
 
-    // Convert event client coords to canvas relative coords
-    getCanvasCoords(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
-    }
-
-    // Find a touch by its identifier in a TouchList
     findTouchById(touchList, id) {
         if (id === null) return null;
         for (let i = 0; i < touchList.length; i++) {
@@ -91,20 +115,265 @@ export class InputHandler {
         return null;
     }
 
-    // Find nearest available dock position for a piece
+    findClosestPieceElement(x, y) {
+        let closestEl = null;
+        let minDist = Infinity;
+
+        // Iterate all rendered pieces
+        if (this.renderer.pieceElements) {
+            for (const el of this.renderer.pieceElements.values()) {
+                const rect = el.getBoundingClientRect();
+
+                // Calculate distance to rectangle (0 if inside)
+                const dx = Math.max(rect.left - x, 0, x - rect.right);
+                const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < FAT_FINGER_RADIUS && dist < minDist) {
+                    minDist = dist;
+                    closestEl = el;
+                }
+            }
+        }
+        return closestEl;
+    }
+
+    handleStart(clientX, clientY, isTouch, touchId = null) {
+        // Prevent double handling (e.g., both touch and mouse events firing)
+        if (this.hasInteraction) return;
+        this.hasInteraction = true;
+
+        // Find piece under touch point
+        let el = document.elementFromPoint(clientX, clientY);
+        let pieceEl = el ? el.closest('.piece') : null;
+
+        // Sticky Touch: If no piece found directly, look for closest one nearby
+        if (!pieceEl) {
+            pieceEl = this.findClosestPieceElement(clientX, clientY);
+        }
+
+        if (!pieceEl || !pieceEl.dataset.pieceId) {
+            this.hasInteraction = false;
+            return;
+        }
+
+        const piece = this.game.pieces.find(p => String(p.id) === pieceEl.dataset.pieceId);
+        if (!piece) {
+            this.hasInteraction = false;
+            return;
+        }
+
+        // Store drag state
+        this.draggingPiece = piece;
+        this.isDragging = false; // Not dragging yet, could be a tap
+        this.dragStartPos = { x: clientX, y: clientY };
+        this.dragStartTime = Date.now();
+        this.activeTouchId = isTouch ? touchId : null;
+
+        // Calculate offset from piece's visual position to touch point
+        const pieceRect = pieceEl.getBoundingClientRect();
+        this.touchOffset = {
+            x: clientX - pieceRect.left,
+            y: clientY - pieceRect.top
+        };
+
+        // Move piece to front (end of array)
+        const idx = this.game.pieces.indexOf(piece);
+        if (idx > -1) {
+            this.game.pieces.splice(idx, 1);
+            this.game.pieces.push(piece);
+        }
+
+        // Trigger "Flash on Grab" effect
+        pieceEl.classList.add('grab-flash');
+        setTimeout(() => {
+            pieceEl.classList.remove('grab-flash');
+        }, 200);
+
+        // DON'T move the piece yet - wait for actual drag detection
+        this.onInteraction();
+    }
+
+    handleMove(clientX, clientY) {
+        if (!this.draggingPiece) return;
+
+        const dist = Math.hypot(clientX - this.dragStartPos.x, clientY - this.dragStartPos.y);
+
+        // Start actual drag only after movement threshold
+        if (!this.isDragging && dist > TAP_MAX_DISTANCE) {
+            this.isDragging = true;
+            this.renderer.draggingPieceId = this.draggingPiece.id;
+        }
+
+        if (this.isDragging) {
+            // Convert screen position to grid position
+            const gridPos = this.renderer.pixelToGrid(
+                clientX - this.touchOffset.x,
+                clientY - this.touchOffset.y
+            );
+
+            // Update piece position (fractional during drag)
+            this.game.updatePieceState(this.draggingPiece.id, {
+                x: gridPos.x,
+                y: gridPos.y
+            });
+
+            // Show ghost preview at snap position
+            this.updateGhostPreview(gridPos.x, gridPos.y);
+            this.onInteraction();
+        }
+    }
+
+    updateGhostPreview(currentX, currentY) {
+        const piece = this.draggingPiece;
+        const shape = piece.currentShape;
+        const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        const boardRows = this.game.targetGrid?.length || 5;
+
+        // Calculate snap position
+        let snapX = Math.round(currentX);
+        let snapY = Math.round(currentY);
+        snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
+        snapY = Math.max(0, snapY);
+
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        const isValid = isValidPlacement(shape, snapX, snapY, this.game.targetGrid, otherPieces);
+
+        // Show ghost only for valid board placements
+        if (isValid && snapY < boardRows) {
+            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color, true);
+        } else {
+            this.renderer.clearGhostPreview();
+        }
+    }
+
+    handleEnd(clientX, clientY) {
+        if (!this.draggingPiece) {
+            this.hasInteraction = false;
+            return;
+        }
+
+        try {
+            this.renderer.clearGhostPreview();
+
+            const dist = Math.hypot(clientX - this.dragStartPos.x, clientY - this.dragStartPos.y);
+            const duration = Date.now() - this.dragStartTime;
+
+            // Check for swipe gesture FIRST (fast movement over threshold distance)
+            // This takes priority over drag, allowing flip even if isDragging became true
+            if (dist >= SWIPE_MIN_DISTANCE && duration < SWIPE_MAX_DURATION) {
+                // Fast swipe = Flip, then snap back to valid position
+                this.handleFlip();
+                this.snapPieceToGrid();
+            } else if (!this.isDragging) {
+                // No significant drag - check for tap
+                if (dist < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
+                    // Tap = Rotate
+                    this.handleRotate();
+                }
+                // Piece stays where it was (no snap needed)
+            } else {
+                // Was dragging (slow movement) - snap piece to valid position
+                this.snapPieceToGrid();
+            }
+        } finally {
+            this.resetDragState();
+        }
+    }
+
+    handleRotate() {
+        const piece = this.draggingPiece;
+        const boardRows = this.getBoardRows();
+        const dockY = getDockY(boardRows);
+
+        // Don't allow rotation of pieces already placed on board
+        if (piece.y < dockY) {
+            return;
+        }
+
+        const newRot = (piece.rotation + 1) % 4;
+        this.game.updatePieceState(piece.id, { rotation: newRot });
+        sounds.playRotate();
+        haptics.vibrateRotate();
+        this.onInteraction();
+    }
+
+    handleFlip() {
+        const piece = this.draggingPiece;
+        const boardRows = this.getBoardRows();
+        const dockY = getDockY(boardRows);
+
+        // Don't allow flip of pieces already placed on board
+        if (piece.y < dockY) {
+            return;
+        }
+
+        this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
+        sounds.playFlip();
+        haptics.vibrateFlip();
+        this.onInteraction();
+    }
+
+    // Public API for snapping a piece to valid position (used by tests)
+    snapPiece(piece) {
+        if (!piece) piece = this.draggingPiece;
+        if (!piece) return;
+
+        this._snapPieceToValidPosition(piece);
+    }
+
+    snapPieceToGrid() {
+        const piece = this.draggingPiece;
+        if (!piece) return;
+
+        this._snapPieceToValidPosition(piece);
+    }
+
+    _snapPieceToValidPosition(piece) {
+        const shape = piece.currentShape;
+        const { width: pieceW } = getShapeDimensions(shape);
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        const boardRows = this.game.targetGrid?.length || 5;
+
+        // Calculate snap position
+        let snapX = Math.round(piece.x);
+        let snapY = Math.round(piece.y);
+        snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
+        snapY = Math.max(0, snapY);
+
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        const isValid = isValidPlacement(shape, snapX, snapY, this.game.targetGrid, otherPieces);
+
+        if (isValid && snapY < boardRows) {
+            // Valid board placement
+            sounds.playSnap();
+            haptics.vibrateSnap();
+        } else {
+            // Invalid - return to dock
+            const dockPos = this.findNearestDockPosition(piece, snapX, snapY);
+            snapX = dockPos.x;
+            snapY = dockPos.y;
+        }
+
+        this.game.updatePieceState(piece.id, { x: snapX, y: snapY });
+        this.onInteraction(true); // Check win
+    }
+
     findNearestDockPosition(piece, targetX, targetY) {
         const shape = piece.currentShape;
         const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
         const boardRows = this.getBoardRows();
         const dockY = getDockY(boardRows);
         const maxDockY = getMaxDockY(boardRows);
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
 
-        // Get other pieces in dock (excluding this one)
+        // Get other pieces in dock
         const otherDockPieces = this.game.pieces.filter(p =>
             p !== piece && p.y >= dockY
         );
 
-        // Build occupancy grid for dock area
+        // Build occupancy grid
         const dockOccupied = new Set();
         otherDockPieces.forEach(p => {
             p.currentShape.forEach(block => {
@@ -113,16 +382,9 @@ export class InputHandler {
             });
         });
 
-        // Get board width dynamically from targetGrid
-        const boardCols = this.game.targetGrid?.[0]?.length || 5;
-
-        // Check if a position is valid for this piece
         const canPlace = (x, y) => {
-            // Bounds check
             if (x < 0 || x + pieceW > boardCols) return false;
             if (y < dockY || y + pieceH > maxDockY + 1) return false;
-
-            // Collision check
             for (const block of piece.currentShape) {
                 const key = `${x + block.x},${y + block.y}`;
                 if (dockOccupied.has(key)) return false;
@@ -130,7 +392,7 @@ export class InputHandler {
             return true;
         };
 
-        // Try positions in order of distance from target
+        // Find nearest valid position
         const candidates = [];
         for (let y = dockY; y <= maxDockY - pieceH + 1; y++) {
             for (let x = 0; x <= boardCols - pieceW; x++) {
@@ -141,247 +403,26 @@ export class InputHandler {
             }
         }
 
-        // Sort by distance and return nearest
         candidates.sort((a, b) => a.dist - b.dist);
         return candidates.length > 0 ? candidates[0] : { x: 0, y: dockY };
     }
 
-    // Snap piece to valid position (extracted for reuse)
-    snapPiece(piece) {
-        let snappedX = Math.round(piece.x);
-        let snappedY = Math.round(piece.y);
-
-        const shape = piece.currentShape;
-        const { width: pieceW } = getShapeDimensions(shape);
-        const boardCols = this.game.targetGrid?.[0]?.length || 5;
-        snappedX = Math.max(0, Math.min(snappedX, boardCols - pieceW));
-        snappedY = Math.max(0, snappedY);
-
-        const grid = this.game.targetGrid;
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
-        const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
-
-        if (!isValid) {
-            // Find nearest available dock position
-            const dockPos = this.findNearestDockPosition(piece, snappedX, snappedY);
-            snappedX = dockPos.x;
-            snappedY = dockPos.y;
-        }
-
-        this.game.updatePieceState(piece.id, {
-            x: snappedX,
-            y: snappedY
-        });
-
-        return isValid;
-    }
-
-    handleStart(input, isTouch, touchId = null) {
-        // If already dragging a piece, snap it first to prevent orphaned pieces
+    cancelDrag() {
+        // Return piece to original dock position if needed
         if (this.draggingPiece) {
-            this.snapPiece(this.draggingPiece);
-            this.draggingPiece = null;
-            this.activeTouchId = null;
-            this.renderer.draggingPieceId = null;
+            const piece = this.draggingPiece;
+            const dockPos = this.findNearestDockPosition(piece, piece.x, piece.y);
+            this.game.updatePieceState(piece.id, { x: dockPos.x, y: dockPos.y });
         }
-
-        const pos = this.getCanvasCoords(input);
-        const gridPos = this.renderer.pixelToGrid(pos.x, pos.y);
-
-        // Find piece under cursor
-        // We iterate in reverse to pick top-most if overlap
-        const dockY = getDockY(this.getBoardRows());
-        for (let i = this.game.pieces.length - 1; i >= 0; i--) {
-            const p = this.game.pieces[i];
-
-            const inDock = p.y >= dockY;
-            const shape = p.currentShape;
-            const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
-
-            let hit;
-            if (inDock) {
-                // Dock pieces: scaled hit detection with touch padding
-                const scale = DOCK_PIECE_SCALE;
-                const padding = 0.25; // Extra touch area around each block
-                const centerX = p.x + pieceW / 2;
-                const centerY = p.y + pieceH / 2;
-
-                hit = shape.some(block => {
-                    const bx = p.x + block.x;
-                    const by = p.y + block.y;
-
-                    // Scale block position relative to piece center
-                    const scaledBx = centerX + (bx - centerX) * scale;
-                    const scaledBy = centerY + (by - centerY) * scale;
-                    const scaledSize = scale;
-
-                    return (
-                        gridPos.x >= scaledBx - padding && gridPos.x < scaledBx + scaledSize + padding &&
-                        gridPos.y >= scaledBy - padding && gridPos.y < scaledBy + scaledSize + padding
-                    );
-                });
-            } else {
-                // Board pieces: precise per-block hit detection
-                hit = shape.some(block => {
-                    const bx = p.x + block.x;
-                    const by = p.y + block.y;
-                    return (
-                        gridPos.x >= bx && gridPos.x < bx + 1 &&
-                        gridPos.y >= by && gridPos.y < by + 1
-                    );
-                });
-            }
-
-            if (hit) {
-                this.draggingPiece = p;
-                this.activeTouchId = touchId; // Track which touch is dragging
-                this.renderer.draggingPieceId = p.id; // Tell renderer which piece is dragging
-
-                // Set offsets
-                this.dragOffset = {
-                    x: gridPos.x - p.x,
-                    y: gridPos.y - p.y
-                };
-
-                this.dragStartPos = { ...pos };
-                this.dragStartTime = Date.now();
-
-                // Mobile: Lift piece up visually so finger doesn't hide it
-                // Calculate dynamically based on gridSize for consistent UX across screen sizes
-                this.visualDragOffset = isTouch ? (this.renderer.gridSize * TOUCH_LIFT_GRID_CELLS) : 0;
-
-                // Move piece to "active" layer (end of list)
-                this.game.pieces.splice(i, 1);
-                this.game.pieces.push(p);
-
-                this.onInteraction();
-                return;
-            }
-        }
-    }
-
-    handleMove(input, isTouch) {
-        if (!this.draggingPiece) return;
-        // preventDefault now handled in bindEvents
-
-        const pos = this.getCanvasCoords(input);
-
-        // Apply visual offset (Finger is below piece)
-        // pos.y is finger. Piece should be at pos.y - visualOFfset
-        const targetScreenY = pos.y - this.visualDragOffset;
-
-        const gridPos = this.renderer.pixelToGrid(pos.x, targetScreenY);
-
-        // Update piece position (Fractional is fine during drag)
-        const newX = gridPos.x - this.dragOffset.x;
-        const newY = gridPos.y - this.dragOffset.y;
-        this.game.updatePieceState(this.draggingPiece.id, {
-            x: newX,
-            y: newY
-        });
-
-        // Calculate and show ghost preview at snap position
-        this.updateGhostPreview(this.draggingPiece, newX, newY);
-
-        this.onInteraction();
-    }
-
-    updateGhostPreview(piece, currentX, currentY) {
-        const shape = piece.currentShape;
-        const { width: pieceW, height: pieceH } = getShapeDimensions(shape);
-        const boardCols = this.game.targetGrid?.[0]?.length || 5;
-
-        // Calculate snap position
-        let snapX = Math.round(currentX);
-        let snapY = Math.round(currentY);
-        snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
-        snapY = Math.max(0, snapY);
-
-        const grid = this.game.targetGrid;
-        const rows = grid.length;
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
-        const isValid = isValidPlacement(shape, snapX, snapY, grid, otherPieces);
-
-        // Only show ghost preview for valid placements
-        if (isValid && snapY < rows) {
-            this.renderer.setGhostPreview(shape, snapX, snapY, piece.color, true);
-        } else {
-            this.renderer.clearGhostPreview();
-        }
-    }
-
-    handleEnd(e) {
-        if (!this.draggingPiece) return;
-
-        // Clear ghost preview
         this.renderer.clearGhostPreview();
+        this.resetDragState();
+    }
 
-        const now = Date.now();
-        const pos = this.getCanvasCoords(e.changedTouches ? e.changedTouches[0] : e);
-        const dist = Math.hypot(pos.x - this.dragStartPos.x, pos.y - this.dragStartPos.y);
-        const duration = now - this.dragStartTime;
-
-        // Gesture detection: swipe vs tap vs drag
-        if (dist >= SWIPE_MIN_DISTANCE && duration < SWIPE_MAX_DURATION) {
-            // Fast swipe → Flip
-            this.handleFlip(this.draggingPiece);
-        } else if (dist < TAP_MAX_DISTANCE && duration < TAP_MAX_DURATION) {
-            // Tap → Rotate
-            this.handleRotate(this.draggingPiece);
-        }
-        // Else: regular drag, just snap to grid
-
-        // Snap to grid
-        let snappedX = Math.round(this.draggingPiece.x);
-        let snappedY = Math.round(this.draggingPiece.y);
-
-        // Constraint: Keep piece within the board horizontally
-        const shape = this.draggingPiece.currentShape;
-        const { width: pieceW } = getShapeDimensions(shape);
-        const boardCols = this.game.targetGrid?.[0]?.length || 5;
-        snappedX = Math.max(0, Math.min(snappedX, boardCols - pieceW));
-        snappedY = Math.max(0, snappedY);
-
-        const grid = this.game.targetGrid;
-        const rows = grid.length;
-        const otherPieces = this.game.pieces.filter(p => p !== this.draggingPiece);
-        const isValid = isValidPlacement(shape, snappedX, snappedY, grid, otherPieces);
-
-        if (!isValid || snappedY >= rows) {
-            // Invalid placement or dropped in dock area - find nearest dock position
-            const dockPos = this.findNearestDockPosition(this.draggingPiece, snappedX, snappedY);
-            snappedX = dockPos.x;
-            snappedY = dockPos.y;
-        } else {
-            // Valid placement on the board - play snap sound & haptic
-            sounds.playSnap();
-            haptics.vibrateSnap();
-        }
-
-        this.game.updatePieceState(this.draggingPiece.id, {
-            x: snappedX,
-            y: snappedY
-        });
-
+    resetDragState() {
         this.draggingPiece = null;
+        this.isDragging = false;
         this.activeTouchId = null;
-        this.visualDragOffset = 0;
-        this.renderer.draggingPieceId = null; // Clear dragging state in renderer
-        this.onInteraction(true); // true = check win
-    }
-
-    handleRotate(piece) {
-        const newRot = (piece.rotation + 1) % 4;
-        this.game.updatePieceState(piece.id, { rotation: newRot });
-        sounds.playRotate();
-        haptics.vibrateRotate();
-        this.onInteraction();
-    }
-
-    handleFlip(piece) {
-        this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
-        sounds.playFlip();
-        haptics.vibrateFlip();
-        this.onInteraction();
+        this.renderer.draggingPieceId = null;
+        this.hasInteraction = false;
     }
 }

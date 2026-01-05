@@ -115,11 +115,6 @@ class SoundManager {
             osc.stop(startTime + duration + 0.15);
         });
     }
-
-    toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
-    }
 }
 
 // Singleton

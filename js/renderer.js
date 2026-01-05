@@ -1,38 +1,46 @@
 import { COLORS, getShapeDimensions } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
-import { getDockY, DOCK_PIECE_SCALE, GHOST_ALPHA } from './config/constants.js';
+import { getDockY } from './config/constants.js';
 
+/**
+ * DOM-based Renderer - replaces Canvas rendering with CSS Grid
+ * Benefits: automatic responsiveness, native touch handling, easier styling
+ */
 export class Renderer {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.width = canvas.width;
-        this.height = canvas.height;
-        this.gridSize = 40; // Default, will resize
+    constructor() {
+        // DOM elements
+        this.boardEl = document.getElementById('game-board');
+        this.dockEl = document.getElementById('piece-dock');
+        this.effectsCanvas = document.getElementById('effects-canvas');
+        this.effectsCtx = this.effectsCanvas?.getContext('2d');
 
-        // Visual configuration
-        this.offsetX = 0; // Board centering
-        this.offsetY = 0;
-
-        // Current board dimensions (updated when game changes)
+        // Board dimensions
         this.boardRows = 5;
         this.boardCols = 5;
 
-        // Effects
+        // Cell size (calculated on resize)
+        this.cellSize = 50;
+
+        // Track created piece elements
+        this.pieceElements = new Map();
+
+        // Ghost preview element
+        this.ghostEl = null;
+
+        // Hint element
+        this.hintEl = null;
+
+        // Confetti system (still uses canvas for particle effects)
         this.confetti = new ConfettiSystem();
 
-        // Ghost preview for dragging
-        this.ghostPreview = null;
-
-        // Currently dragging piece (set by InputHandler)
+        // Currently dragging
         this.draggingPieceId = null;
 
-        // Resize observer
+        // Resize handling
         window.addEventListener('resize', () => this.resize());
         this.resize();
     }
 
-    // Update board dimensions (call when game changes)
     setBoardSize(rows, cols) {
         if (this.boardRows !== rows || this.boardCols !== cols) {
             this.boardRows = rows;
@@ -42,271 +50,344 @@ export class Renderer {
     }
 
     resize() {
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        // Update CSS variables for grid sizing
+        this.boardEl.style.setProperty('--rows', this.boardRows);
+        this.boardEl.style.setProperty('--cols', this.boardCols);
 
-        // Minimum header offset to prevent board overlapping "LEVEL X" text
-        const MIN_HEADER_OFFSET = 120;
+        // Calculate cell size - uniform size everywhere (no scaling)
+        // Target: ~40px cells, similar to what dock pieces were at scale(0.5)
+        const containerWidth = Math.min(window.innerWidth, 600) - 40;
+        const containerHeight = window.innerHeight * 0.30;
+        const maxCellSize = 40;
+        this.cellSize = Math.floor(Math.min(
+            containerWidth / this.boardCols,
+            containerHeight / this.boardRows,
+            maxCellSize
+        ));
 
-        // Vertical Layout Requirements:
-        // Header: MIN_HEADER_OFFSET pixels (fixed)
-        // Board: boardRows blocks
-        // Gap: 1 block
-        // Dock: 8 blocks (more rows for scaled pieces)
-        // Bottom Padding: ~1 block equivalent
-        const contentGridHeight = this.boardRows + 1 + 8 + 1;
+        // Set on container so it's available for pieces in dock too
+        this.boardEl.parentElement.style.setProperty('--cell-size', `${this.cellSize}px`);
 
-        // Horizontal:
-        // Board boardCols blocks + Padding
-        const totalGridWidth = this.boardCols + 2;
-
-        // Calculate gridSize from available space after header
-        const availableHeight = this.height - MIN_HEADER_OFFSET;
-        const maxCellH = availableHeight / contentGridHeight;
-        const maxCellW = this.width / totalGridWidth;
-
-        // Pick the smaller to ensure fit
-        this.gridSize = Math.floor(Math.min(maxCellH, maxCellW));
-
-        // Center Horizontally based on actual board width
-        this.offsetX = (this.width - (this.boardCols * this.gridSize)) / 2;
-
-        // Position board below header - use calculated offset or minimum, whichever is larger
-        this.offsetY = Math.max(this.gridSize * 2.5, MIN_HEADER_OFFSET);
+        // Resize effects canvas
+        if (this.effectsCanvas) {
+            this.effectsCanvas.width = window.innerWidth;
+            this.effectsCanvas.height = window.innerHeight;
+        }
     }
 
-    // Convert Screen Pixels to Grid Coords (can be fractional)
+    // Get board position for coordinate calculations
+    getBoardRect() {
+        return this.boardEl.getBoundingClientRect();
+    }
+
+    // Convert pixel position to grid coordinates
     pixelToGrid(px, py) {
+        const rect = this.getBoardRect();
         return {
-            x: (px - this.offsetX) / this.gridSize,
-            y: (py - this.offsetY) / this.gridSize
+            x: (px - rect.left) / this.cellSize,
+            y: (py - rect.top) / this.cellSize
         };
     }
 
-    // Convert Grid Coords to Screen Pixels
-    gridToPixel(gx, gy) {
-        return {
-            x: this.offsetX + gx * this.gridSize,
-            y: this.offsetY + gy * this.gridSize
-        };
+    // Get cell size for external calculations
+    get gridSize() {
+        return this.cellSize;
     }
 
-    clear() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-    }
-
+    // Main draw function - updates DOM elements
     draw(game) {
-        this.clear();
-        this.drawTargetGrid(game.targetGrid);
+        this.updateBoard(game.targetGrid);
+        this.updatePieces(game.pieces);
 
-        // Draw hint if active
-        if (this.hintData) {
-            this.drawHint(this.hintData);
+        // Update confetti (still canvas-based)
+        if (this.effectsCtx) {
+            this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
+            this.confetti.update();
+            this.confetti.draw(this.effectsCtx);
+        }
+    }
+
+    // Create/update board grid cells
+    updateBoard(grid) {
+        if (!grid || grid.length === 0) return;
+
+        const rows = grid.length;
+        const cols = grid[0].length;
+
+        // Only recreate if dimensions changed
+        const currentCells = this.boardEl.querySelectorAll('.board-cell').length;
+        if (currentCells !== rows * cols) {
+            this.boardEl.innerHTML = '';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'board-cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    this.boardEl.appendChild(cell);
+                }
+            }
         }
 
-        // Draw ghost preview if dragging
-        if (this.ghostPreview) {
-            this.drawGhostPreview(this.ghostPreview);
-        }
+        // Update cell states
+        const cells = this.boardEl.querySelectorAll('.board-cell');
+        let i = 0;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = cells[i++];
+                const value = grid[r][c];
 
-        game.pieces.forEach(p => {
-            const isDragging = p.id === this.draggingPieceId;
-            this.drawPiece(p, isDragging);
+                cell.classList.toggle('target', value === 1);
+                cell.classList.toggle('hole', value === -1);
+                cell.classList.toggle('outside', value === -2);
+            }
+        }
+    }
+
+    // Create/update piece elements
+    updatePieces(pieces) {
+        const dockY = getDockY(this.boardRows);
+
+        pieces.forEach(piece => {
+            let el = this.pieceElements.get(piece.id);
+
+            // Create piece element if needed
+            if (!el) {
+                el = this.createPieceElement(piece);
+                this.pieceElements.set(piece.id, el);
+            }
+
+            // Update piece shape and color
+            this.updatePieceShape(el, piece);
+
+            // Determine state
+            const isDragging = piece.id === this.draggingPieceId;
+
+            if (isDragging) {
+                // Debug log to verify renderer sees the drag state
+                // console.log('Renderer: dragging piece', piece.id);
+            }
+
+            const inDock = piece.y >= dockY;
+            const onBoard = !inDock && !isDragging;
+
+            // Update classes
+            el.classList.toggle('in-dock', inDock && !isDragging);
+            el.classList.toggle('on-board', onBoard);
+            el.classList.toggle('dragging', isDragging);
+
+            // Position piece using CSS custom properties for cleaner DOM-based rendering
+            el.style.setProperty('--piece-x', piece.x);
+            el.style.setProperty('--piece-y', piece.y);
+
+            if (onBoard) {
+                // On board: CSS handles positioning via custom properties
+                el.style.position = 'absolute';
+                el.style.zIndex = '';
+
+                if (el.parentElement !== this.boardEl) {
+                    this.boardEl.appendChild(el);
+                }
+            } else if (isDragging) {
+                // Dragging: use fixed position relative to viewport
+                // IMPORTANT: Do NOT reparent the element - moving it in the DOM during
+                // a touch gesture breaks touch event tracking.
+                const rect = this.getBoardRect();
+                el.style.setProperty('--board-left', `${rect.left}px`);
+                el.style.setProperty('--board-top', `${rect.top}px`);
+                el.style.position = 'fixed';
+                el.style.zIndex = '1000';
+            } else {
+                // In dock: relative positioning handled by flexbox
+                el.style.position = 'relative';
+                el.style.zIndex = '';
+
+                if (el.parentElement !== this.dockEl) {
+                    this.dockEl.appendChild(el);
+                }
+            }
         });
 
-        // Update and draw effects
-        this.confetti.update();
-        this.confetti.draw(this.ctx);
+        // Remove orphaned piece elements
+        for (const [id, el] of this.pieceElements) {
+            if (!pieces.find(p => p.id === id)) {
+                el.remove();
+                this.pieceElements.delete(id);
+            }
+        }
     }
 
-    showHint(hintData) {
-        this.hintData = hintData;
+    createPieceElement(piece) {
+        const el = document.createElement('div');
+        el.className = 'piece';
+        el.dataset.pieceId = piece.id;
+        el.style.color = piece.color || COLORS[0];
+        return el;
     }
 
-    hideHint() {
-        this.hintData = null;
+    updatePieceShape(el, piece) {
+        const shape = piece.currentShape;
+        const dims = getShapeDimensions(shape);
+        const color = piece.color || COLORS[0];
+
+        // Create a signature for the current shape to detect changes
+        // This prevents unnecessary DOM rebuilds which break touch tracking
+        const shapeSignature = `${dims.width}x${dims.height}:${shape.map(b => `${b.x},${b.y}`).sort().join(';')}:${color}`;
+
+        // Update grid template - no gap to match board cells exactly
+        el.style.display = 'grid';
+        el.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
+        el.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
+        el.style.width = `calc(var(--cell-size) * ${dims.width})`;
+        el.style.height = `calc(var(--cell-size) * ${dims.height})`;
+        el.style.color = color;
+
+        // Only rebuild DOM if shape has actually changed
+        // Rebuilding during touchstart breaks Chrome/CDP touch tracking
+        if (el.dataset.shapeSignature === shapeSignature) {
+            return; // Shape unchanged, skip DOM rebuild
+        }
+        el.dataset.shapeSignature = shapeSignature;
+
+        // Clear and rebuild blocks
+        el.innerHTML = '';
+
+        // Create a grid of the shape
+        for (let y = 0; y < dims.height; y++) {
+            for (let x = 0; x < dims.width; x++) {
+                const hasBlock = shape.some(b => b.x === x && b.y === y);
+
+                if (hasBlock) {
+                    const block = document.createElement('div');
+                    block.className = 'piece-block';
+                    block.style.setProperty('--piece-color', color);
+                    el.appendChild(block);
+                } else {
+                    // Empty spacer for grid alignment - must be completely invisible
+                    const spacer = document.createElement('div');
+                    spacer.style.background = 'transparent';
+                    spacer.style.border = 'none';
+                    spacer.style.visibility = 'hidden';
+                    el.appendChild(spacer);
+                }
+            }
+        }
     }
 
+    // Ghost preview for drag placement
     setGhostPreview(shape, x, y, color, isValid = true) {
-        this.ghostPreview = { shape, x, y, color, isValid };
+        if (!this.ghostEl) {
+            this.ghostEl = document.createElement('div');
+            this.ghostEl.className = 'ghost-preview';
+            this.boardEl.appendChild(this.ghostEl);
+        }
+
+        const dims = getShapeDimensions(shape);
+        const shapeSignature = `${dims.width}x${dims.height}:${shape.map(b => `${b.x},${b.y}`).sort().join(';')}:${color}`;
+
+        // Only rebuild DOM if shape changed
+        if (this.ghostEl.dataset.shapeSignature !== shapeSignature) {
+            this.ghostEl.dataset.shapeSignature = shapeSignature;
+            this.ghostEl.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
+            this.ghostEl.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
+            this.ghostEl.style.color = color;
+
+            this.ghostEl.innerHTML = '';
+            for (let py = 0; py < dims.height; py++) {
+                for (let px = 0; px < dims.width; px++) {
+                    const hasBlock = shape.some(b => b.x === px && b.y === py);
+                    if (hasBlock) {
+                        const block = document.createElement('div');
+                        block.className = 'piece-block';
+                        this.ghostEl.appendChild(block);
+                    } else {
+                        const spacer = document.createElement('div');
+                        spacer.style.visibility = 'hidden';
+                        this.ghostEl.appendChild(spacer);
+                    }
+                }
+            }
+        }
+
+        // Always update position and validity state
+        this.ghostEl.style.left = `${x * this.cellSize}px`;
+        this.ghostEl.style.top = `${y * this.cellSize}px`;
+        this.ghostEl.style.opacity = isValid ? '0.4' : '0.2';
+        this.ghostEl.style.display = 'grid';
     }
 
     clearGhostPreview() {
-        this.ghostPreview = null;
-    }
-
-    drawHint(hint) {
-        const { x, y, shape, color } = hint;
-
-        this.ctx.save();
-
-        // Pulsing glow effect
-        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.5;
-        this.ctx.globalAlpha = pulse;
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 3;
-        this.ctx.shadowColor = color;
-        this.ctx.shadowBlur = 20;
-
-        shape.forEach(block => {
-            const pos = this.gridToPixel(x + block.x, y + block.y);
-            const margin = 4;
-            const size = this.gridSize - (margin * 2);
-            this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
-        });
-
-        this.ctx.restore();
-    }
-
-    drawGhostPreview(ghost) {
-        const { x, y, shape, color, isValid } = ghost;
-
-        this.ctx.save();
-
-        if (isValid) {
-            // Valid placement: solid ghost with piece color
-            this.ctx.globalAlpha = GHOST_ALPHA;
-            this.ctx.fillStyle = color;
-            this.ctx.strokeStyle = color;
-            this.ctx.setLineDash([4, 4]);
-        } else {
-            // Invalid placement: dimmed, no fill, just outline
-            this.ctx.globalAlpha = 0.2;
-            this.ctx.fillStyle = 'transparent';
-            this.ctx.strokeStyle = '#888';
-            this.ctx.setLineDash([2, 4]);
+        if (this.ghostEl) {
+            this.ghostEl.style.display = 'none';
+            delete this.ghostEl.dataset.shapeSignature;
         }
-        this.ctx.lineWidth = 2;
-
-        shape.forEach(block => {
-            const pos = this.gridToPixel(x + block.x, y + block.y);
-            const margin = 4;
-            const size = this.gridSize - (margin * 2);
-            if (isValid) {
-                this.ctx.fillRect(pos.x + margin, pos.y + margin, size, size);
-            }
-            this.ctx.strokeRect(pos.x + margin, pos.y + margin, size, size);
-        });
-
-        this.ctx.restore();
     }
 
+    // Hint display
+    showHint(hintData) {
+        const { x, y, shape, color } = hintData;
+
+        if (!this.hintEl) {
+            this.hintEl = document.createElement('div');
+            this.hintEl.className = 'hint-overlay';
+            this.boardEl.appendChild(this.hintEl);
+        }
+
+        const dims = getShapeDimensions(shape);
+        this.hintEl.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
+        this.hintEl.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
+        this.hintEl.style.color = color;
+        this.hintEl.style.left = `${x * this.cellSize}px`;
+        this.hintEl.style.top = `${y * this.cellSize}px`;
+
+        // Rebuild blocks
+        this.hintEl.innerHTML = '';
+        for (let py = 0; py < dims.height; py++) {
+            for (let px = 0; px < dims.width; px++) {
+                const hasBlock = shape.some(b => b.x === px && b.y === py);
+                if (hasBlock) {
+                    const block = document.createElement('div');
+                    block.className = 'piece-block';
+                    this.hintEl.appendChild(block);
+                } else {
+                    const spacer = document.createElement('div');
+                    spacer.style.background = 'transparent';
+                    spacer.style.border = 'none';
+                    spacer.style.visibility = 'hidden';
+                    this.hintEl.appendChild(spacer);
+                }
+            }
+        }
+
+        this.hintEl.style.display = 'grid';
+    }
+
+    hideHint() {
+        if (this.hintEl) {
+            this.hintEl.style.display = 'none';
+        }
+    }
+
+    // Effects
     triggerWinEffect() {
-        // Burst confetti from center of the board (dynamic based on actual board size)
-        const centerX = this.offsetX + (this.boardCols / 2 * this.gridSize);
-        const centerY = this.offsetY + (this.boardRows / 2 * this.gridSize);
-        this.confetti.burst(centerX, centerY, 100);
+        if (this.effectsCanvas) {
+            const rect = this.boardEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            this.confetti.burst(centerX, centerY, 100);
+        }
     }
 
     clearEffects() {
         this.confetti.clear();
+        if (this.effectsCtx) {
+            this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
+        }
     }
 
-    drawTargetGrid(grid) {
-        if (!grid || grid.length === 0 || !grid[0]) return;
-        const rows = grid.length;
-        const cols = grid[0].length;
-
-        this.ctx.save();
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        this.ctx.lineWidth = 2;
-
-        // Draw grid slots
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const cellValue = grid[r][c];
-                const pos = this.gridToPixel(c, r);
-
-                if (cellValue === 1) {
-                    // Valid target spot - teal pit
-                    this.ctx.fillStyle = 'rgba(0, 60, 70, 0.8)';
-                    this.ctx.fillRect(pos.x, pos.y, this.gridSize, this.gridSize);
-
-                    this.ctx.shadowColor = '#00ffff';
-                    this.ctx.shadowBlur = 10;
-                    this.ctx.strokeRect(pos.x, pos.y, this.gridSize, this.gridSize);
-                    this.ctx.shadowBlur = 0;
-                }
-                // Holes (-1) and outside cells (-2) are not drawn - they appear as background
-            }
-        }
-        this.ctx.restore();
-    }
-
-    drawPiece(piece, isDragging = false) {
-        const shape = piece.currentShape;
-        const color = piece.color || COLORS[0];
-        const dockY = getDockY(this.boardRows);
-        const inDock = piece.y >= dockY;
-        const onBoard = !inDock && !isDragging;
-
-        this.ctx.save();
-
-        const pos = this.gridToPixel(piece.x, piece.y);
-        let x = pos.x;
-        let y = pos.y;
-
-        // Determine scale and effects based on state
-        // Pieces are small (50%) in dock AND while dragging
-        // Only full size when placed on board
-        let scale = 1.0;
-
-        if (onBoard) {
-            // On board: full size
-            scale = 1.0;
-            this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 5;
-            this.ctx.globalAlpha = 0.9;
-        } else if (isDragging) {
-            // Dragging: stay small, strong glow
-            scale = DOCK_PIECE_SCALE;
-            this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 15;
-            this.ctx.globalAlpha = 0.95;
-        } else {
-            // In dock (not dragging): small
-            scale = DOCK_PIECE_SCALE;
-            this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 5;
-            this.ctx.globalAlpha = 0.85;
-        }
-
-        // Apply scaling transform (centered on piece)
-        if (scale !== 1.0) {
-            const dims = getShapeDimensions(shape);
-            const pieceWidth = dims.width * this.gridSize;
-            const pieceHeight = dims.height * this.gridSize;
-            const centerX = x + pieceWidth / 2;
-            const centerY = y + pieceHeight / 2;
-
-            this.ctx.translate(centerX, centerY);
-            this.ctx.scale(scale, scale);
-            this.ctx.translate(-centerX, -centerY);
-        }
-
-        this.ctx.fillStyle = color;
-        this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
-
-        shape.forEach(block => {
-            const bx = x + block.x * this.gridSize;
-            const by = y + block.y * this.gridSize;
-
-            // Draw block with small margin for "mosaic" look
-            const margin = 4;
-            const size = this.gridSize - (margin * 2);
-
-            this.ctx.fillRect(bx + margin, by + margin, size, size);
-            this.ctx.strokeRect(bx + margin, by + margin, size, size);
-
-            // Inner glossy highlight
-            this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            this.ctx.fillRect(bx + margin, by + margin, size, size / 2);
-            this.ctx.fillStyle = color; // reset
-        });
-
-        this.ctx.restore();
+    // Get piece element by ID (for input handler)
+    getPieceElement(pieceId) {
+        return this.pieceElements.get(pieceId);
     }
 }

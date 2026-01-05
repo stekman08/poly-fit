@@ -9,11 +9,10 @@ import { getDifficultyParams } from './config/difficulty.js';
 import {
     getDockY,
     getMaxDockY,
-    WIN_OVERLAY_DELAY,
-    HINT_DELAY
+    HINT_DELAY,
+    WIN_TRANSITION_DELAY
 } from './config/constants.js';
 
-const canvas = document.getElementById('game-canvas');
 const winOverlay = document.getElementById('win-overlay');
 const levelDisplay = document.getElementById('level-display');
 const startScreen = document.getElementById('start-screen');
@@ -32,10 +31,10 @@ const TUTORIAL_MAX_SHOWS = 3;
 
 // Color themes
 const THEMES = [
-    { name: 'cyan', primary: '#00ffff', secondary: '#00cccc' },
-    { name: 'magenta', primary: '#ff00ff', secondary: '#cc00cc' },
-    { name: 'green', primary: '#00ff00', secondary: '#00cc00' },
-    { name: 'orange', primary: '#ff8800', secondary: '#cc6600' }
+    { name: 'cyan', primary: '#00E5FF', secondary: '#00B8CC' },
+    { name: 'magenta', primary: '#F92672', secondary: '#E02266' },
+    { name: 'green', primary: '#A6E22E', secondary: '#8FD125' },
+    { name: 'orange', primary: '#FD971F', secondary: '#E0851A' }
 ];
 const THEME_STORAGE_KEY = 'polyfit-theme';
 
@@ -56,7 +55,8 @@ function safeSetItem(key, value) {
     }
 }
 
-const renderer = new Renderer(canvas);
+// DOM-based renderer (no canvas needed)
+const renderer = new Renderer();
 let game = null;
 let level = 1;
 let maxLevel = parseInt(safeGetItem('polyfit-max-level', '1'), 10) || 1;
@@ -228,6 +228,10 @@ function startLevelWithData(puzzleData) {
         game.targetGrid = null;
     }
 
+    // Force reset of board animations by clearing DOM (ensures sync)
+    const boardEl = document.getElementById('game-board');
+    if (boardEl) boardEl.innerHTML = '';
+
     try {
         // Update renderer with new board dimensions
         renderer.setBoardSize(puzzleData.boardRows, puzzleData.boardCols);
@@ -304,37 +308,36 @@ function onInteraction(checkWin = false) {
         sounds.playWin();
         haptics.vibrateWin();
         renderer.triggerWinEffect();
-        setTimeout(() => {
-            winOverlay.classList.remove('hidden');
-            setTimeout(() => {
-                if (practiceMode) {
-                    // Practice mode: return to start screen
-                    practiceMode = false;
-                    showStartScreen();
-                } else {
-                    // Normal mode: advance to next level
-                    level++;
-                    if (level > maxLevel) {
-                        maxLevel = level;
-                        safeSetItem('polyfit-max-level', maxLevel);
 
-                        // Track new max level in analytics
-                        try {
-                            if (window.goatcounter && window.goatcounter.count) {
-                                window.goatcounter.count({
-                                    path: '/polyfit/event/maxlevel/' + maxLevel,
-                                    title: 'PolyFit Max Level: ' + maxLevel,
-                                    event: true
-                                });
-                            }
-                        } catch (e) {
-                            // Analytics error should not break the game
+        // INSTANT FLOW: Short play delay then immediate next level
+        setTimeout(() => {
+            if (practiceMode) {
+                // Practice mode: return to start screen
+                practiceMode = false;
+                showStartScreen();
+            } else {
+                // Normal mode: advance to next level
+                level++;
+                if (level > maxLevel) {
+                    maxLevel = level;
+                    safeSetItem('polyfit-max-level', maxLevel);
+
+                    // Track new max level in analytics
+                    try {
+                        if (window.goatcounter && window.goatcounter.count) {
+                            window.goatcounter.count({
+                                path: '/polyfit/event/maxlevel/' + maxLevel,
+                                title: 'PolyFit Max Level: ' + maxLevel,
+                                event: true
+                            });
                         }
+                    } catch (e) {
+                        // Analytics error should not break the game
                     }
-                    startLevel();
                 }
-            }, 1500);
-        }, WIN_OVERLAY_DELAY);
+                startLevel();
+            }
+        }, WIN_TRANSITION_DELAY);
     }
 }
 
@@ -456,7 +459,6 @@ function setupCheatCode() {
 // Initialize
 setupCheatCode();
 loadTheme();
-// cycleTheme(); // Removed: This was changing color at start, breaking tests
 showStartScreen();
 
 function showStartScreen() {
