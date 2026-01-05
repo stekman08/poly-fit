@@ -37,9 +37,9 @@ test.describe('Hint System', () => {
         await page.evaluate(() => window.__testForceHint());
         await page.waitForTimeout(100);
 
-        // Interact with canvas (tap)
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        // Interact with dock (tap)
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
         await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
 
         await page.waitForTimeout(50);

@@ -39,15 +39,171 @@ body {
     width: 100%;
     height: 100%;
     max-width: 600px;
-    /* Mobile focused */
     margin: 0 auto;
     background: radial-gradient(circle at center, #111 0%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-#game-canvas {
-    display: block;
+/* === GAME BOARD - CSS Grid === */
+#game-board {
+    --cols: 5;
+    --rows: 5;
+    --cell-size: min(calc((100vw - 40px) / var(--cols)),
+            calc((50vh - 120px) / var(--rows)));
+
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--cell-size));
+    grid-template-rows: repeat(var(--rows), var(--cell-size));
+    gap: 2px;
+    margin: 100px auto 20px;
+    position: relative;
+}
+
+.board-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    box-sizing: border-box;
+}
+
+.board-cell.target {
+    background: rgba(0, 60, 70, 0.8);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.board-cell.outside,
+.board-cell.hole {
+    background: transparent;
+    border: none;
+}
+
+/* === PIECE DOCK === */
+#piece-dock {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    gap: 10px;
+    padding: 20px;
+    margin-top: 10px;
+    min-height: 150px;
+    position: relative;
+}
+
+/* === PIECES === */
+.piece {
+    display: grid;
+    position: absolute;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: transform 0.1s ease-out, box-shadow 0.1s;
+    z-index: 10;
+}
+
+.piece.in-dock {
+    position: relative;
+    transform: scale(0.5);
+    transform-origin: top left;
+}
+
+.piece.dragging {
+    cursor: grabbing;
+    z-index: 100;
+    transform: scale(1);
+    filter: drop-shadow(0 0 15px currentColor);
+    /* Position relative to viewport using CSS custom properties */
+    left: calc(var(--board-left, 0px) + var(--piece-x, 0) * var(--cell-size));
+    top: calc(var(--board-top, 0px) + var(--piece-y, 0) * var(--cell-size));
+}
+
+.piece.on-board {
+    position: absolute;
+    transform: scale(1);
+    /* Position relative to board using CSS custom properties */
+    left: calc(var(--piece-x, 0) * var(--cell-size));
+    top: calc(var(--piece-y, 0) * var(--cell-size));
+}
+
+.piece-block {
+    width: var(--cell-size, 50px);
+    height: var(--cell-size, 50px);
+    box-sizing: border-box;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    position: relative;
+}
+
+/* Glossy highlight on blocks */
+.piece-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+    border-radius: 2px 2px 0 0;
+    pointer-events: none;
+}
+
+/* === GHOST PREVIEW === */
+.ghost-preview {
+    position: absolute;
+    display: grid;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0.4;
+}
+
+.ghost-preview .piece-block {
+    border-style: dashed;
+    background: currentColor !important;
+}
+
+.ghost-preview .piece-block::before {
+    display: none;
+}
+
+/* === HINT DISPLAY === */
+.hint-overlay {
+    position: absolute;
+    display: grid;
+    pointer-events: none;
+    z-index: 4;
+    animation: hint-pulse 2s ease-in-out infinite;
+}
+
+.hint-overlay .piece-block {
+    background: transparent !important;
+    border: 3px solid currentColor;
+    box-shadow: 0 0 20px currentColor;
+}
+
+@keyframes hint-pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* === EFFECTS CANVAS (confetti only) === */
+#effects-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none;
+    z-index: 200;
 }
 
 #ui-layer {
@@ -211,58 +367,6 @@ body {
     pointer-events: none;
     user-select: none;
     letter-spacing: 1px;
-}
-
-/* Desktop/No-touch Message */
-#desktop-message {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--bg-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-#desktop-message.hidden {
-    display: none;
-}
-
-.desktop-modal {
-    text-align: center;
-    padding: 40px;
-    max-width: 400px;
-}
-
-.desktop-modal .neon-text {
-    font-size: 3rem;
-    margin-bottom: 30px;
-}
-
-.desktop-modal .phone-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    filter: drop-shadow(0 0 10px var(--neon-blue));
-}
-
-.desktop-modal p {
-    font-size: 1.2rem;
-    color: #ccc;
-    line-height: 1.6;
-    margin: 0 0 15px 0;
-}
-
-.desktop-modal p strong {
-    color: var(--neon-blue);
-    text-shadow: 0 0 10px var(--neon-blue);
-}
-
-.desktop-modal .sub-text {
-    font-size: 0.9rem;
-    color: #666;
 }
 
 /* Start Screen */

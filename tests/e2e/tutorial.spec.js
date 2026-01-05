@@ -155,8 +155,8 @@ test.describe('Tutorial', () => {
         );
 
         // Find where the GOT IT button would be (center of screen, lower portion)
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const container = page.locator('#game-container');
+        const box = await container.boundingBox();
         const centerX = box.x + box.width / 2;
         const centerY = box.y + box.height * 0.7; // Roughly where button was
 

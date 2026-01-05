@@ -13,7 +13,6 @@ import {
     HINT_DELAY
 } from './config/constants.js';
 
-const canvas = document.getElementById('game-canvas');
 const winOverlay = document.getElementById('win-overlay');
 const levelDisplay = document.getElementById('level-display');
 const startScreen = document.getElementById('start-screen');
@@ -56,7 +55,8 @@ function safeSetItem(key, value) {
     }
 }
 
-const renderer = new Renderer(canvas);
+// DOM-based renderer (no canvas needed)
+const renderer = new Renderer();
 let game = null;
 let level = 1;
 let maxLevel = parseInt(safeGetItem('polyfit-max-level', '1'), 10) || 1;

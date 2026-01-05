@@ -24,13 +24,15 @@ test.describe('Ghost Preview', () => {
     test('pieces snap to grid after drag ends', async ({ page }) => {
         await startGame(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const dockBox = await dock.boundingBox();
+        const board = page.locator('#game-board');
+        const boardBox = await board.boundingBox();
 
-        const startX = box.x + box.width * 0.2;
-        const startY = box.y + box.height * 0.85;
-        const targetX = box.x + box.width * 0.5;
-        const targetY = box.y + box.height * 0.3;
+        const startX = dockBox.x + dockBox.width * 0.5;
+        const startY = dockBox.y + dockBox.height * 0.5;
+        const targetX = boardBox.x + boardBox.width * 0.5;
+        const targetY = boardBox.y + boardBox.height * 0.5;
 
         // Drag and release
         await page.mouse.move(startX, startY);
@@ -52,16 +54,18 @@ test.describe('Ghost Preview', () => {
     test('ghost preview shows when piece is over board', async ({ page }) => {
         await startGame(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const dockBox = await dock.boundingBox();
+        const board = page.locator('#game-board');
+        const boardBox = await board.boundingBox();
 
         // Find a piece in the dock
-        const startX = box.x + box.width * 0.5;
-        const startY = box.y + box.height * 0.85;
+        const startX = dockBox.x + dockBox.width * 0.5;
+        const startY = dockBox.y + dockBox.height * 0.5;
 
         // Target: middle of the board
-        const targetX = box.x + box.width * 0.5;
-        const targetY = box.y + box.height * 0.3;
+        const targetX = boardBox.x + boardBox.width * 0.5;
+        const targetY = boardBox.y + boardBox.height * 0.5;
 
         // Use touch events for mobile emulation
         await page.touchscreen.tap(startX, startY);
@@ -69,16 +73,16 @@ test.describe('Ghost Preview', () => {
 
         // Simulate touch drag by dispatching events directly
         const ghostSetDuringDrag = await page.evaluate(async ({ startX, startY, targetX, targetY }) => {
-            const canvas = document.querySelector('#game-canvas');
+            const container = document.querySelector('#game-container');
 
             // Touch start
             const touchStart = new Touch({
                 identifier: 1,
-                target: canvas,
+                target: container,
                 clientX: startX,
                 clientY: startY
             });
-            canvas.dispatchEvent(new TouchEvent('touchstart', {
+            container.dispatchEvent(new TouchEvent('touchstart', {
                 touches: [touchStart],
                 targetTouches: [touchStart],
                 changedTouches: [touchStart],
@@ -88,23 +92,23 @@ test.describe('Ghost Preview', () => {
             // Touch move to board area
             const touchMove = new Touch({
                 identifier: 1,
-                target: canvas,
+                target: container,
                 clientX: targetX,
                 clientY: targetY
             });
-            canvas.dispatchEvent(new TouchEvent('touchmove', {
+            container.dispatchEvent(new TouchEvent('touchmove', {
                 touches: [touchMove],
                 targetTouches: [touchMove],
                 changedTouches: [touchMove],
                 bubbles: true
             }));
 
-            // Check ghost while dragging
-            const renderer = window.game.renderer || window.renderer;
-            const ghostSet = renderer.ghostPreview !== null;
+            // Check ghost while dragging - in DOM renderer, ghostEl is visible when set
+            const renderer = window.renderer;
+            const ghostSet = renderer.ghostEl !== null && renderer.ghostEl.style.display !== 'none';
 
             // Touch end
-            canvas.dispatchEvent(new TouchEvent('touchend', {
+            container.dispatchEvent(new TouchEvent('touchend', {
                 touches: [],
                 targetTouches: [],
                 changedTouches: [touchMove],
@@ -118,10 +122,10 @@ test.describe('Ghost Preview', () => {
         // The important thing is the API works - tested in next test
         expect(typeof ghostSetDuringDrag).toBe('boolean');
 
-        // Ghost should be cleared after release
+        // Ghost should be cleared (hidden) after release
         const ghostCleared = await page.evaluate(() => {
-            const renderer = window.game.renderer || window.renderer;
-            return renderer.ghostPreview === null;
+            const renderer = window.renderer;
+            return renderer.ghostEl === null || renderer.ghostEl.style.display === 'none';
         });
         expect(ghostCleared).toBe(true);
     });
@@ -129,26 +133,28 @@ test.describe('Ghost Preview', () => {
     test('setGhostPreview accepts isValid parameter', async ({ page }) => {
         await startGame(page);
 
-        // Test the API directly
+        // Test the API directly - DOM renderer shows/hides ghost via opacity
         const result = await page.evaluate(() => {
-            const renderer = window.game.renderer || window.renderer;
+            const renderer = window.renderer;
 
-            // Test with valid=true (default)
+            // Test with valid=true (default) - should have higher opacity
             renderer.setGhostPreview([{ x: 0, y: 0 }], 0, 0, '#FF0000');
-            const validGhost = renderer.ghostPreview;
-            const hasValidDefault = validGhost.isValid === true;
+            const validOpacity = parseFloat(renderer.ghostEl.style.opacity);
 
-            // Test with valid=false
+            // Test with valid=false - should have lower opacity
             renderer.setGhostPreview([{ x: 0, y: 0 }], 0, 0, '#FF0000', false);
-            const invalidGhost = renderer.ghostPreview;
-            const hasInvalidFlag = invalidGhost.isValid === false;
+            const invalidOpacity = parseFloat(renderer.ghostEl.style.opacity);
 
             renderer.clearGhostPreview();
 
-            return { hasValidDefault, hasInvalidFlag };
+            return {
+                validOpacity,
+                invalidOpacity,
+                validIsHigher: validOpacity > invalidOpacity
+            };
         });
 
-        expect(result.hasValidDefault).toBe(true);
-        expect(result.hasInvalidFlag).toBe(true);
+        // Valid ghost should be more visible than invalid
+        expect(result.validIsHigher).toBe(true);
     });
 });

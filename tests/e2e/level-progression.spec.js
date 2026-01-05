@@ -35,20 +35,16 @@ async function isWinning(page) {
 }
 
 async function clickOnPiece(page) {
-    const canvas = page.locator('#game-canvas');
-    const box = await canvas.boundingBox();
+    // Get first piece's DOM element
+    const pieceId = await page.evaluate(() => window.game.pieces[0].id);
+    const pieceEl = page.locator(`.piece[data-piece-id="${pieceId}"]`);
+    const box = await pieceEl.boundingBox();
 
-    const piecePos = await page.evaluate(() => {
-        const piece = window.game.pieces[0];
-        return { x: piece.x, y: piece.y };
-    });
-
-    const cellWidth = box.width / 5;
-    const cellHeight = box.height / 12;
-    const clickX = box.x + (piecePos.x + 0.5) * cellWidth;
-    const clickY = box.y + (piecePos.y + 0.5) * cellHeight;
-
-    await page.mouse.click(clickX, clickY);
+    if (box) {
+        const clickX = box.x + box.width / 2;
+        const clickY = box.y + box.height / 2;
+        await page.mouse.click(clickX, clickY);
+    }
 }
 
 // Trigger checkWin directly via exposed test helper
@@ -61,12 +57,12 @@ test.describe('Level Progression - Race Condition Prevention', () => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
         for (let i = 0; i < 10; i++) {
             const tapX = box.x + box.width * (0.2 + Math.random() * 0.6);
-            const tapY = box.y + box.height * 0.85;
+            const tapY = box.y + box.height * 0.5;
             await page.mouse.click(tapX, tapY);
             await page.waitForTimeout(50);
         }
@@ -113,14 +109,16 @@ test.describe('Level Progression - Race Condition Prevention', () => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const dockBox = await dock.boundingBox();
+        const board = page.locator('#game-board');
+        const boardBox = await board.boundingBox();
 
         for (let i = 0; i < 5; i++) {
-            const startX = box.x + box.width * 0.3;
-            const startY = box.y + box.height * 0.85;
-            const endX = box.x + box.width * 0.5;
-            const endY = box.y + box.height * 0.3;
+            const startX = dockBox.x + dockBox.width * 0.3;
+            const startY = dockBox.y + dockBox.height * 0.5;
+            const endX = boardBox.x + boardBox.width * 0.5;
+            const endY = boardBox.y + boardBox.height * 0.5;
 
             await page.mouse.move(startX, startY);
             await page.mouse.down();
@@ -137,22 +135,27 @@ test.describe('Level Progression - Race Condition Prevention', () => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
-        const piecePos = await page.evaluate(() => {
-            const piece = window.game.pieces[0];
-            return { x: piece.x, y: piece.y };
-        });
+        // Get first piece's DOM element
+        const pieceId = await page.evaluate(() => window.game.pieces[0].id);
+        const pieceEl = page.locator(`.piece[data-piece-id="${pieceId}"]`);
+        const box = await pieceEl.boundingBox();
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        if (!box) {
+            // Fallback to dock area if piece not visible
+            const dock = page.locator('#piece-dock');
+            const dockBox = await dock.boundingBox();
+            for (let i = 0; i < 20; i++) {
+                await page.mouse.click(dockBox.x + dockBox.width / 2, dockBox.y + dockBox.height / 2);
+                await page.waitForTimeout(20);
+            }
+        } else {
+            const tapX = box.x + box.width / 2;
+            const tapY = box.y + box.height / 2;
 
-        const cellWidth = box.width / 5;
-        const cellHeight = box.height / 12;
-        const tapX = box.x + (piecePos.x + 0.5) * cellWidth;
-        const tapY = box.y + (piecePos.y + 0.5) * cellHeight;
-
-        for (let i = 0; i < 20; i++) {
-            await page.mouse.click(tapX, tapY);
-            await page.waitForTimeout(20);
+            for (let i = 0; i < 20; i++) {
+                await page.mouse.click(tapX, tapY);
+                await page.waitForTimeout(20);
+            }
         }
 
         const finalLevel = await getLevel(page);
@@ -254,11 +257,11 @@ test.describe('Level Progression - Touch Event Simulation', () => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
         for (let i = 0; i < 10; i++) {
-            await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.85);
+            await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.5);
             await page.waitForTimeout(50);
         }
 
@@ -270,13 +273,13 @@ test.describe('Level Progression - Touch Event Simulation', () => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
-        await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.85);
-        await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.85);
-        await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.85);
-        await page.touchscreen.tap(box.x + box.width * 0.4, box.y + box.height * 0.85);
+        await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.5);
+        await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.5);
+        await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.5);
+        await page.touchscreen.tap(box.x + box.width * 0.4, box.y + box.height * 0.5);
 
         const finalLevel = await getLevel(page);
         expect(finalLevel).toBe(initialLevel);

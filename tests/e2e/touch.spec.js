@@ -22,14 +22,13 @@ test.describe('Touch interactions', () => {
         const levelBefore = await page.locator('#level-display').textContent();
         expect(levelBefore).toContain('LEVEL 1');
 
-        // Get canvas position
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        // Get dock area position
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
-        // Tap in the dock area where pieces are (bottom of screen)
-        // Pieces spawn at y=6 grid units, which is below the 5x5 board
+        // Tap in the dock area where pieces are
         const tapX = box.x + box.width / 2;
-        const tapY = box.y + box.height * 0.8; // 80% down = dock area
+        const tapY = box.y + box.height / 2;
 
         // Perform tap (quick touch)
         await page.touchscreen.tap(tapX, tapY);
@@ -47,16 +46,18 @@ test.describe('Touch interactions', () => {
     test('dragging piece should not trigger level change', async ({ page }) => {
         const levelBefore = await page.locator('#level-display').textContent();
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const dockBox = await dock.boundingBox();
+        const board = page.locator('#game-board');
+        const boardBox = await board.boundingBox();
 
         // Start position (dock area)
-        const startX = box.x + box.width / 2;
-        const startY = box.y + box.height * 0.8;
+        const startX = dockBox.x + dockBox.width / 2;
+        const startY = dockBox.y + dockBox.height / 2;
 
         // End position (board area)
-        const endX = box.x + box.width / 2;
-        const endY = box.y + box.height * 0.4;
+        const endX = boardBox.x + boardBox.width / 2;
+        const endY = boardBox.y + boardBox.height / 2;
 
         // Perform touch drag
         await page.touchscreen.tap(startX, startY); // This actually does tap, we need drag
@@ -284,13 +285,13 @@ test.describe('Multi-touch safety', () => {
         await startGame(page);
 
         // Do various interactions
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
         // Several quick taps/drags
         for (let i = 0; i < 5; i++) {
             const x = box.x + box.width * (0.2 + Math.random() * 0.6);
-            const y = box.y + box.height * (0.7 + Math.random() * 0.2);
+            const y = box.y + box.height * (0.2 + Math.random() * 0.6);
             await page.mouse.click(x, y);
             await page.waitForTimeout(50);
         }
@@ -313,15 +314,15 @@ test.describe('Multi-touch safety', () => {
     test('rapid multi-point touches should not leave pieces at fractional positions', async ({ page }) => {
         await startGame(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
         // Simulate rapid interactions at different positions
         // This mimics multi-touch by rapidly touching different areas
         for (let round = 0; round < 3; round++) {
             // Start a drag
             const startX = box.x + box.width * 0.3;
-            const startY = box.y + box.height * 0.8;
+            const startY = box.y + box.height * 0.3;
             await page.mouse.move(startX, startY);
             await page.mouse.down();
 
@@ -330,7 +331,7 @@ test.describe('Multi-touch safety', () => {
 
             // Touch another area (simulates second finger)
             const tapX = box.x + box.width * 0.7;
-            const tapY = box.y + box.height * 0.85;
+            const tapY = box.y + box.height * 0.5;
             await page.touchscreen.tap(tapX, tapY);
 
             // Release first
@@ -357,12 +358,12 @@ test.describe('Multi-touch safety', () => {
     test('piece coordinates are always snapped after any touch end', async ({ page }) => {
         await startGame(page);
 
-        const canvas = page.locator('#game-canvas');
-        const box = await canvas.boundingBox();
+        const dock = page.locator('#piece-dock');
+        const box = await dock.boundingBox();
 
         // Start dragging in dock area
         const startX = box.x + box.width * 0.5;
-        const startY = box.y + box.height * 0.8;
+        const startY = box.y + box.height * 0.3;
 
         await page.mouse.move(startX, startY);
         await page.mouse.down();

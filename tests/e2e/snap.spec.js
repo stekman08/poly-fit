@@ -14,27 +14,27 @@ async function startGame(page) {
 
 test('snap logic validation', async ({ page }) => {
     await startGame(page);
-    const canvas = page.locator('#game-canvas');
-    await expect(canvas).toBeVisible();
+    const container = page.locator('#game-container');
+    await expect(container).toBeVisible();
 
-    // Get canvas geometry
-    const box = await canvas.boundingBox();
-    if (!box) throw new Error("No canvas");
+    // Get dock and board geometry
+    const dock = page.locator('#piece-dock');
+    const dockBox = await dock.boundingBox();
+    const board = page.locator('#game-board');
+    const boardBox = await board.boundingBox();
+    if (!dockBox || !boardBox) throw new Error("No dock or board");
 
     // Get piece info directly
     const initialPieceY = await page.evaluate(() => {
         return window.game.pieces[0].y;
     });
 
-    const width = box.width;
-    const height = box.height;
+    // Drag from dock toward top of board (likely invalid placement)
+    const startX = dockBox.x + (dockBox.width * 0.5);
+    const startY = dockBox.y + (dockBox.height * 0.5);
 
-    // Drag Piece 0
-    const startX = box.x + (width * 0.2);
-    const startY = box.y + (height * 0.9);
-
-    const targetX = box.x + (width * 0.5);
-    const targetY = box.y + (height * 0.1);
+    const targetX = boardBox.x + (boardBox.width * 0.5);
+    const targetY = boardBox.y + 10; // Near top edge
 
     await page.mouse.move(startX, startY);
     await page.mouse.down();
@@ -43,7 +43,7 @@ test('snap logic validation', async ({ page }) => {
 
     await page.waitForTimeout(500);
 
-    // Check new position
+    // Check new position - piece should snap back to dock if invalid
     const finalPieceY = await page.evaluate(() => {
         return window.game.pieces[0].y;
     });
