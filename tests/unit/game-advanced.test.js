@@ -246,32 +246,6 @@ describe('Game - hint system', () => {
         expect(hint).toBeNull();
     });
 
-    it('clearHint removes hint state', () => {
-        const puzzleData = {
-            targetGrid: [[1]],
-            pieces: [
-                {
-                    id: 0,
-                    shape: [{ x: 0, y: 0 }],
-                    originalShape: [{ x: 0, y: 0 }],
-                    color: '#ff0000',
-                    solutionX: 0,
-                    solutionY: 0,
-                    solutionRotation: 0,
-                    solutionFlipped: false
-                }
-            ]
-        };
-
-        const game = new Game(puzzleData);
-        game.getHint();
-        expect(game.hintPiece).not.toBeNull();
-
-        game.clearHint();
-        expect(game.hintPiece).toBeNull();
-        expect(game.hintShape).toBeNull();
-    });
-
     it('getHint applies flip when solutionFlipped is true', () => {
         // L-shape: [{0,0}, {0,1}, {0,2}, {1,2}]
         const lShape = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }];

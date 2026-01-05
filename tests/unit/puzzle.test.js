@@ -5,14 +5,9 @@ import { SHAPES, rotateShape, flipShape, normalizeShape } from '../../js/shapes.
 
 describe('Puzzle Generation Logic', () => {
 
-    // Helper: Create an empty 5x5 grid
-    function createGrid(size = 5) {
-        return Array(size).fill(0).map(() => Array(size).fill(0));
-    }
-
     describe('canPlacePiece', () => {
         it('should return true if piece fits in empty space', () => {
-            const grid = createGrid(5);
+            const grid = createGrid(5, 5);
             // Place T shape at 0,0
             // T: (0,0), (1,0), (2,0), (1,1)
             const piece = SHAPES.T;
@@ -20,14 +15,14 @@ describe('Puzzle Generation Logic', () => {
         });
 
         it('should return false if piece goes out of bounds', () => {
-            const grid = createGrid(5);
+            const grid = createGrid(5, 5);
             const piece = SHAPES.Line4; // Length 4 vertical
             // Place at y=2. 2,3,4,5. 5 is out of bounds.
             expect(canPlacePiece(grid, piece, 0, 2)).toBe(false);
         });
 
         it('should return false if piece overlaps existing block', () => {
-            const grid = createGrid(5);
+            const grid = createGrid(5, 5);
             // Occupy 1,1
             grid[1][1] = 1;
 

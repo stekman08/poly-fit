@@ -1,5 +1,5 @@
 import { SHAPES, COLORS, rotateShape, flipShape, normalizeShape } from './shapes.js';
-import { GRID_ROWS, GRID_COLS } from './config/constants.js';
+import { GRID_ROWS, GRID_COLS, MAX_GENERATION_RETRIES } from './config/constants.js';
 import { selectPiecesWithBias, IRREGULAR_SHAPES } from './config/difficulty.js';
 import { countSolutions } from './solver.js';
 import { shuffleArray, createGrid } from './utils.js';
@@ -157,11 +157,10 @@ export function generatePuzzle(config = {}) {
         irregularShape = null
     } = config;
 
-    const MAX_RETRIES = 2000;
     let retries = 0;
     const shapeKeys = Object.keys(SHAPES);
 
-    while (retries < MAX_RETRIES) {
+    while (retries < MAX_GENERATION_RETRIES) {
         const grid = createGrid(boardRows, boardCols);
 
         // Apply irregular shape cutouts if specified

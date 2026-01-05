@@ -7,6 +7,8 @@ import {
     TAP_MAX_DURATION,
     SWIPE_MIN_DISTANCE,
     SWIPE_MAX_DURATION,
+    FAT_FINGER_RADIUS,
+    TOUCH_MOUSE_DEBOUNCE,
     getDockY,
     getMaxDockY
 } from './config/constants.js';
@@ -83,8 +85,8 @@ export class InputHandler {
 
         // Mouse events - ignore if triggered by touch compatibility
         this.container.addEventListener('mousedown', (e) => {
-            // Ignore mouse events within 500ms of a touch event (browser compatibility behavior)
-            if (Date.now() - this.lastTouchTime < 500) {
+            // Ignore mouse events after touch (browser compatibility behavior)
+            if (Date.now() - this.lastTouchTime < TOUCH_MOUSE_DEBOUNCE) {
                 return;
             }
             this.handleStart(e.clientX, e.clientY, false);
@@ -114,7 +116,6 @@ export class InputHandler {
     }
 
     findClosestPieceElement(x, y) {
-        const HIT_RADIUS = 45; // Generous radius for "fat finger"
         let closestEl = null;
         let minDist = Infinity;
 
@@ -123,13 +124,12 @@ export class InputHandler {
             for (const el of this.renderer.pieceElements.values()) {
                 const rect = el.getBoundingClientRect();
 
-                // Calculate distance to rectangle
-                // 0 if inside
+                // Calculate distance to rectangle (0 if inside)
                 const dx = Math.max(rect.left - x, 0, x - rect.right);
                 const dy = Math.max(rect.top - y, 0, y - rect.bottom);
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist < HIT_RADIUS && dist < minDist) {
+                if (dist < FAT_FINGER_RADIUS && dist < minDist) {
                     minDist = dist;
                     closestEl = el;
                 }

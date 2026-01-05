@@ -89,25 +89,6 @@ export class Renderer {
         };
     }
 
-    /**
-     * Get the piece ID at the specified screen coordinates
-     * Uses native DOM hit detection
-     * @param {number} x - Client X coordinate
-     * @param {number} y - Client Y coordinate
-     * @returns {string|null} - Piece ID or null
-     */
-    getPieceAt(x, y) {
-        const el = document.elementFromPoint(x, y);
-        if (!el) return null;
-
-        // Traverse up to find the piece container
-        const pieceEl = el.closest('.piece');
-        if (pieceEl) {
-            return pieceEl.dataset.pieceId;
-        }
-        return null;
-    }
-
     // Get cell size for external calculations
     get gridSize() {
         return this.cellSize;
@@ -181,8 +162,7 @@ export class Renderer {
             this.updatePieceShape(el, piece);
 
             // Determine state
-            // Use loose equality to be safe
-            const isDragging = piece.id == this.draggingPieceId;
+            const isDragging = piece.id === this.draggingPieceId;
 
             if (isDragging) {
                 // Debug log to verify renderer sees the drag state
@@ -304,39 +284,43 @@ export class Renderer {
         }
 
         const dims = getShapeDimensions(shape);
-        this.ghostEl.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
-        this.ghostEl.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
-        this.ghostEl.style.color = color;
-        this.ghostEl.style.left = `${x * this.cellSize}px`;
-        this.ghostEl.style.top = `${y * this.cellSize}px`;
-        this.ghostEl.style.opacity = isValid ? '0.4' : '0.2';
+        const shapeSignature = `${dims.width}x${dims.height}:${shape.map(b => `${b.x},${b.y}`).sort().join(';')}:${color}`;
 
-        // Rebuild blocks
-        this.ghostEl.innerHTML = '';
-        for (let py = 0; py < dims.height; py++) {
-            for (let px = 0; px < dims.width; px++) {
-                const hasBlock = shape.some(b => b.x === px && b.y === py);
-                if (hasBlock) {
-                    const block = document.createElement('div');
-                    block.className = 'piece-block';
-                    block.style.backgroundColor = isValid ? color : '#888';
-                    this.ghostEl.appendChild(block);
-                } else {
-                    const spacer = document.createElement('div');
-                    spacer.style.background = 'transparent';
-                    spacer.style.border = 'none';
-                    spacer.style.visibility = 'hidden';
-                    this.ghostEl.appendChild(spacer);
+        // Only rebuild DOM if shape changed
+        if (this.ghostEl.dataset.shapeSignature !== shapeSignature) {
+            this.ghostEl.dataset.shapeSignature = shapeSignature;
+            this.ghostEl.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
+            this.ghostEl.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
+            this.ghostEl.style.color = color;
+
+            this.ghostEl.innerHTML = '';
+            for (let py = 0; py < dims.height; py++) {
+                for (let px = 0; px < dims.width; px++) {
+                    const hasBlock = shape.some(b => b.x === px && b.y === py);
+                    if (hasBlock) {
+                        const block = document.createElement('div');
+                        block.className = 'piece-block';
+                        this.ghostEl.appendChild(block);
+                    } else {
+                        const spacer = document.createElement('div');
+                        spacer.style.visibility = 'hidden';
+                        this.ghostEl.appendChild(spacer);
+                    }
                 }
             }
         }
 
+        // Always update position and validity state
+        this.ghostEl.style.left = `${x * this.cellSize}px`;
+        this.ghostEl.style.top = `${y * this.cellSize}px`;
+        this.ghostEl.style.opacity = isValid ? '0.4' : '0.2';
         this.ghostEl.style.display = 'grid';
     }
 
     clearGhostPreview() {
         if (this.ghostEl) {
             this.ghostEl.style.display = 'none';
+            delete this.ghostEl.dataset.shapeSignature;
         }
     }
 

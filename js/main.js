@@ -9,8 +9,8 @@ import { getDifficultyParams } from './config/difficulty.js';
 import {
     getDockY,
     getMaxDockY,
-    WIN_OVERLAY_DELAY,
-    HINT_DELAY
+    HINT_DELAY,
+    WIN_TRANSITION_DELAY
 } from './config/constants.js';
 
 const winOverlay = document.getElementById('win-overlay');
@@ -337,7 +337,7 @@ function onInteraction(checkWin = false) {
                 }
                 startLevel();
             }
-        }, 600); // 600ms overlap with confetti
+        }, WIN_TRANSITION_DELAY);
     }
 }
 

@@ -55,11 +55,6 @@ export class Game {
         return null;
     }
 
-    clearHint() {
-        this.hintPiece = null;
-        this.hintShape = null;
-    }
-
     // Update position/state of a piece
     updatePieceState(id, newState) {
         const piece = this.pieces.find(p => p.id === id);

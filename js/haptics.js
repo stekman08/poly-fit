@@ -37,11 +37,6 @@ class HapticManager {
     vibrateWin() {
         this.vibrate([30, 50, 30, 50, 80]);
     }
-
-    toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
-    }
 }
 
 export const haptics = new HapticManager();
