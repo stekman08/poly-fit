@@ -113,19 +113,45 @@ export class InputHandler {
         return null;
     }
 
+    findClosestPieceElement(x, y) {
+        const HIT_RADIUS = 45; // Generous radius for "fat finger"
+        let closestEl = null;
+        let minDist = Infinity;
+
+        // Iterate all rendered pieces
+        if (this.renderer.pieceElements) {
+            for (const el of this.renderer.pieceElements.values()) {
+                const rect = el.getBoundingClientRect();
+
+                // Calculate distance to rectangle
+                // 0 if inside
+                const dx = Math.max(rect.left - x, 0, x - rect.right);
+                const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < HIT_RADIUS && dist < minDist) {
+                    minDist = dist;
+                    closestEl = el;
+                }
+            }
+        }
+        return closestEl;
+    }
+
     handleStart(clientX, clientY, isTouch, touchId = null) {
         // Prevent double handling (e.g., both touch and mouse events firing)
         if (this.hasInteraction) return;
         this.hasInteraction = true;
 
         // Find piece under touch point
-        const el = document.elementFromPoint(clientX, clientY);
-        if (!el) {
-            this.hasInteraction = false;
-            return;
+        let el = document.elementFromPoint(clientX, clientY);
+        let pieceEl = el ? el.closest('.piece') : null;
+
+        // Sticky Touch: If no piece found directly, look for closest one nearby
+        if (!pieceEl) {
+            pieceEl = this.findClosestPieceElement(clientX, clientY);
         }
 
-        const pieceEl = el.closest('.piece');
         if (!pieceEl || !pieceEl.dataset.pieceId) {
             this.hasInteraction = false;
             return;
@@ -157,6 +183,12 @@ export class InputHandler {
             this.game.pieces.splice(idx, 1);
             this.game.pieces.push(piece);
         }
+
+        // Trigger "Flash on Grab" effect
+        pieceEl.classList.add('grab-flash');
+        setTimeout(() => {
+            pieceEl.classList.remove('grab-flash');
+        }, 200);
 
         // DON'T move the piece yet - wait for actual drag detection
         this.onInteraction();
@@ -252,6 +284,14 @@ export class InputHandler {
 
     handleRotate() {
         const piece = this.draggingPiece;
+        const boardRows = this.getBoardRows();
+        const dockY = getDockY(boardRows);
+
+        // Don't allow rotation of pieces already placed on board
+        if (piece.y < dockY) {
+            return;
+        }
+
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
         sounds.playRotate();
@@ -261,6 +301,14 @@ export class InputHandler {
 
     handleFlip() {
         const piece = this.draggingPiece;
+        const boardRows = this.getBoardRows();
+        const dockY = getDockY(boardRows);
+
+        // Don't allow flip of pieces already placed on board
+        if (piece.y < dockY) {
+            return;
+        }
+
         this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
         sounds.playFlip();
         haptics.vibrateFlip();

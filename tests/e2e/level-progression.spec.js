@@ -324,7 +324,7 @@ test.describe('Level Progression - Edge Cases', () => {
         expect(finalLevel).toBe(initialLevel + 1);
     });
 
-    test('win overlay visibility does not affect level counting', async ({ page }) => {
+    test('instant flow passes without showing win overlay', async ({ page }) => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
@@ -332,16 +332,17 @@ test.describe('Level Progression - Edge Cases', () => {
 
         await triggerWinCheck(page);
 
-        await page.waitForFunction(() => !document.querySelector('#win-overlay').classList.contains('hidden'));
+        // Wait for potential transition/animation time
+        await page.waitForTimeout(1000);
 
-        // Keep interacting after overlay shows
-        for (let i = 0; i < 10; i++) {
-            await triggerWinCheck(page);
-        }
-
-        await page.waitForTimeout(2000);
-
+        // Verify level advanced
         const finalLevel = await getLevel(page);
         expect(finalLevel).toBe(initialLevel + 1);
+
+        // Verify overlay NEVER appeared (still hidden)
+        const isHidden = await page.evaluate(() =>
+            document.querySelector('#win-overlay').classList.contains('hidden')
+        );
+        expect(isHidden).toBe(true);
     });
 });

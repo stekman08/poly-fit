@@ -31,10 +31,10 @@ const TUTORIAL_MAX_SHOWS = 3;
 
 // Color themes
 const THEMES = [
-    { name: 'cyan', primary: '#00ffff', secondary: '#00cccc' },
-    { name: 'magenta', primary: '#ff00ff', secondary: '#cc00cc' },
-    { name: 'green', primary: '#00ff00', secondary: '#00cc00' },
-    { name: 'orange', primary: '#ff8800', secondary: '#cc6600' }
+    { name: 'cyan', primary: '#00E5FF', secondary: '#00B8CC' },
+    { name: 'magenta', primary: '#F92672', secondary: '#E02266' },
+    { name: 'green', primary: '#A6E22E', secondary: '#8FD125' },
+    { name: 'orange', primary: '#FD971F', secondary: '#E0851A' }
 ];
 const THEME_STORAGE_KEY = 'polyfit-theme';
 
@@ -228,6 +228,10 @@ function startLevelWithData(puzzleData) {
         game.targetGrid = null;
     }
 
+    // Force reset of board animations by clearing DOM (ensures sync)
+    const boardEl = document.getElementById('game-board');
+    if (boardEl) boardEl.innerHTML = '';
+
     try {
         // Update renderer with new board dimensions
         renderer.setBoardSize(puzzleData.boardRows, puzzleData.boardCols);
@@ -304,37 +308,36 @@ function onInteraction(checkWin = false) {
         sounds.playWin();
         haptics.vibrateWin();
         renderer.triggerWinEffect();
-        setTimeout(() => {
-            winOverlay.classList.remove('hidden');
-            setTimeout(() => {
-                if (practiceMode) {
-                    // Practice mode: return to start screen
-                    practiceMode = false;
-                    showStartScreen();
-                } else {
-                    // Normal mode: advance to next level
-                    level++;
-                    if (level > maxLevel) {
-                        maxLevel = level;
-                        safeSetItem('polyfit-max-level', maxLevel);
 
-                        // Track new max level in analytics
-                        try {
-                            if (window.goatcounter && window.goatcounter.count) {
-                                window.goatcounter.count({
-                                    path: '/polyfit/event/maxlevel/' + maxLevel,
-                                    title: 'PolyFit Max Level: ' + maxLevel,
-                                    event: true
-                                });
-                            }
-                        } catch (e) {
-                            // Analytics error should not break the game
+        // INSTANT FLOW: Short play delay then immediate next level
+        setTimeout(() => {
+            if (practiceMode) {
+                // Practice mode: return to start screen
+                practiceMode = false;
+                showStartScreen();
+            } else {
+                // Normal mode: advance to next level
+                level++;
+                if (level > maxLevel) {
+                    maxLevel = level;
+                    safeSetItem('polyfit-max-level', maxLevel);
+
+                    // Track new max level in analytics
+                    try {
+                        if (window.goatcounter && window.goatcounter.count) {
+                            window.goatcounter.count({
+                                path: '/polyfit/event/maxlevel/' + maxLevel,
+                                title: 'PolyFit Max Level: ' + maxLevel,
+                                event: true
+                            });
                         }
+                    } catch (e) {
+                        // Analytics error should not break the game
                     }
-                    startLevel();
                 }
-            }, 1500);
-        }, WIN_OVERLAY_DELAY);
+                startLevel();
+            }
+        }, 600); // 600ms overlap with confetti
     }
 }
 
@@ -456,7 +459,6 @@ function setupCheatCode() {
 // Initialize
 setupCheatCode();
 loadTheme();
-// cycleTheme(); // Removed: This was changing color at start, breaking tests
 showStartScreen();
 
 function showStartScreen() {

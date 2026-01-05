@@ -54,12 +54,15 @@ export class Renderer {
         this.boardEl.style.setProperty('--rows', this.boardRows);
         this.boardEl.style.setProperty('--cols', this.boardCols);
 
-        // Calculate cell size
+        // Calculate cell size - uniform size everywhere (no scaling)
+        // Target: ~40px cells, similar to what dock pieces were at scale(0.5)
         const containerWidth = Math.min(window.innerWidth, 600) - 40;
-        const containerHeight = window.innerHeight * 0.45;
+        const containerHeight = window.innerHeight * 0.30;
+        const maxCellSize = 40;
         this.cellSize = Math.floor(Math.min(
             containerWidth / this.boardCols,
-            containerHeight / this.boardRows
+            containerHeight / this.boardRows,
+            maxCellSize
         ));
 
         // Set on container so it's available for pieces in dock too
@@ -252,11 +255,10 @@ export class Renderer {
         // This prevents unnecessary DOM rebuilds which break touch tracking
         const shapeSignature = `${dims.width}x${dims.height}:${shape.map(b => `${b.x},${b.y}`).sort().join(';')}:${color}`;
 
-        // Update grid template with gap for better visuals
+        // Update grid template - no gap to match board cells exactly
         el.style.display = 'grid';
-        el.style.gap = '1px';
-        el.style.gridTemplateColumns = `repeat(${dims.width}, 1fr)`;
-        el.style.gridTemplateRows = `repeat(${dims.height}, 1fr)`;
+        el.style.gridTemplateColumns = `repeat(${dims.width}, var(--cell-size))`;
+        el.style.gridTemplateRows = `repeat(${dims.height}, var(--cell-size))`;
         el.style.width = `calc(var(--cell-size) * ${dims.width})`;
         el.style.height = `calc(var(--cell-size) * ${dims.height})`;
         el.style.color = color;
@@ -279,11 +281,13 @@ export class Renderer {
                 if (hasBlock) {
                     const block = document.createElement('div');
                     block.className = 'piece-block';
-                    block.style.backgroundColor = color;
+                    block.style.setProperty('--piece-color', color);
                     el.appendChild(block);
                 } else {
-                    // Empty spacer for grid alignment
+                    // Empty spacer for grid alignment - must be completely invisible
                     const spacer = document.createElement('div');
+                    spacer.style.background = 'transparent';
+                    spacer.style.border = 'none';
                     spacer.style.visibility = 'hidden';
                     el.appendChild(spacer);
                 }
@@ -319,6 +323,8 @@ export class Renderer {
                     this.ghostEl.appendChild(block);
                 } else {
                     const spacer = document.createElement('div');
+                    spacer.style.background = 'transparent';
+                    spacer.style.border = 'none';
                     spacer.style.visibility = 'hidden';
                     this.ghostEl.appendChild(spacer);
                 }
@@ -362,6 +368,8 @@ export class Renderer {
                     this.hintEl.appendChild(block);
                 } else {
                     const spacer = document.createElement('div');
+                    spacer.style.background = 'transparent';
+                    spacer.style.border = 'none';
                     spacer.style.visibility = 'hidden';
                     this.hintEl.appendChild(spacer);
                 }

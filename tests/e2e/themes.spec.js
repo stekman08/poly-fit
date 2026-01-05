@@ -9,7 +9,7 @@ test.describe('Color Themes', () => {
         const initialColor = await page.evaluate(() =>
             getComputedStyle(document.documentElement).getPropertyValue('--neon-blue').trim()
         );
-        expect(initialColor).toBe('#00ffff');
+        expect(initialColor).toBe('#00E5FF');
 
         // Tap title
         const title = page.locator('.start-modal .neon-text');
@@ -19,7 +19,7 @@ test.describe('Color Themes', () => {
         const newColor = await page.evaluate(() =>
             getComputedStyle(document.documentElement).getPropertyValue('--neon-blue').trim()
         );
-        expect(newColor).toBe('#ff00ff');
+        expect(newColor).toBe('#F92672');
     });
 
     test('theme persists in localStorage', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('Color Themes', () => {
         const color = await page.evaluate(() =>
             getComputedStyle(document.documentElement).getPropertyValue('--neon-blue').trim()
         );
-        expect(color).toBe('#ff8800');
+        expect(color).toBe('#FD971F');
     });
 
     test('theme cycles through all 4 colors', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('Color Themes', () => {
         await page.waitForSelector('#start-screen');
 
         const title = page.locator('.start-modal .neon-text');
-        const expectedColors = ['#ff00ff', '#00ff00', '#ff8800', '#00ffff'];
+        const expectedColors = ['#F92672', '#A6E22E', '#FD971F', '#00E5FF'];
 
         for (const expected of expectedColors) {
             await title.click();

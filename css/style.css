@@ -5,12 +5,14 @@
     --sab: env(safe-area-inset-bottom);
     --sal: env(safe-area-inset-left);
 
-    --bg-color: #050505;
-    --neon-blue: #00ffff;
-    --neon-pink: #ff00ff;
-    --neon-green: #00ff00;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    /* Deep Neon Palette */
+    --bg-color: #0B0C15;
+    --neon-blue: #00E5FF;
+    --neon-pink: #F92672;
+    --neon-green: #A6E22E;
+
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
     --font-main: 'Orbitron', 'Segoe UI', sans-serif;
 }
 
@@ -40,7 +42,7 @@ body {
     height: 100%;
     max-width: 600px;
     margin: 0 auto;
-    background: radial-gradient(circle at center, #111 0%, #000 100%);
+    background: radial-gradient(circle at center, #1a1c29 0%, #050505 100%);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -50,13 +52,12 @@ body {
 #game-board {
     --cols: 5;
     --rows: 5;
-    --cell-size: min(calc((100vw - 40px) / var(--cols)),
-            calc((50vh - 120px) / var(--rows)));
+    /* --cell-size is set by JavaScript on #game-container for consistency */
 
     display: grid;
     grid-template-columns: repeat(var(--cols), var(--cell-size));
     grid-template-rows: repeat(var(--rows), var(--cell-size));
-    gap: 2px;
+    gap: 0; /* Piece positioning uses simple x * cellSize calculation */
     margin: 100px auto 20px;
     position: relative;
 }
@@ -68,9 +69,27 @@ body {
 }
 
 .board-cell.target {
-    background: rgba(0, 60, 70, 0.8);
-    border: 1px solid rgba(0, 255, 255, 0.3);
-    box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.1);
+    /* "Deep Slot" Look - Recessed */
+    background: rgba(0, 10, 20, 0.4);
+    border: 1px solid rgba(0, 229, 255, 0.1);
+    box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.05);
+    border-radius: 4px;
+    /* Subtle breathing animation */
+    animation: board-pulse 4s infinite alternate ease-in-out;
+}
+
+@keyframes board-pulse {
+    from {
+        border-color: rgba(0, 229, 255, 0.3);
+        /* Boosted fram 0.1 to 0.3 */
+        box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.1);
+    }
+
+    to {
+        border-color: rgba(0, 229, 255, 0.6);
+        /* Boosted from 0.3 to 0.6 */
+        box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.2);
+    }
 }
 
 .board-cell.outside,
@@ -106,23 +125,53 @@ body {
 
 .piece.in-dock {
     position: relative;
-    transform: scale(0.5);
-    transform-origin: top left;
+    /* No scaling - same size as board cells */
+}
+
+@keyframes grab-flash {
+    0% {
+        filter: brightness(2);
+        transform: scale(1.1);
+    }
+
+    100% {
+        filter: brightness(1);
+        transform: scale(1.05);
+    }
+
+    /* Ends at dragging scale */
+}
+
+.piece.grab-flash {
+    animation: grab-flash 0.2s ease-out forwards;
 }
 
 .piece.dragging {
     cursor: grabbing;
-    z-index: 100;
-    transform: scale(1);
-    filter: drop-shadow(0 0 15px currentColor);
+    z-index: 1000;
+    pointer-events: none;
+    /* Let clicks pass through to board */
+
     /* Position relative to viewport using CSS custom properties */
     left: calc(var(--board-left, 0px) + var(--piece-x, 0) * var(--cell-size));
     top: calc(var(--board-top, 0px) + var(--piece-y, 0) * var(--cell-size));
+
+    /* Enhance glow while dragging */
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+    transform: scale(1.05);
+    /* Slight lift */
+}
+
+.piece.dragging .piece-block {
+    /* Hotter border while dragging */
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow:
+        0 0 15px var(--piece-color),
+        inset 0 0 20px color-mix(in srgb, var(--piece-color), transparent 10%);
 }
 
 .piece.on-board {
     position: absolute;
-    transform: scale(1);
     /* Position relative to board using CSS custom properties */
     left: calc(var(--piece-x, 0) * var(--cell-size));
     top: calc(var(--piece-y, 0) * var(--cell-size));
@@ -132,22 +181,28 @@ body {
     width: var(--cell-size, 50px);
     height: var(--cell-size, 50px);
     box-sizing: border-box;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    border-radius: 4px;
+    /* Glass Neon Effect */
+    background-color: color-mix(in srgb, var(--piece-color), transparent 85%);
+    /* Very transparent center */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+
+    /* Thinner, sharper lines */
+    border: 1.5px solid color-mix(in srgb, var(--piece-color), white 50%);
+
+    /* Controlled Glow */
+    box-shadow:
+        0 0 5px var(--piece-color),
+        inset 0 0 10px color-mix(in srgb, var(--piece-color), transparent 30%);
+
+    border-radius: 6px;
     position: relative;
 }
 
-/* Glossy highlight on blocks */
-.piece-block::before {
+/* Surface Sheen / Reflection */
+.piece-block::after {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
-    border-radius: 2px 2px 0 0;
-    pointer-events: none;
+    display: none;
 }
 
 /* === GHOST PREVIEW === */
@@ -161,10 +216,13 @@ body {
 
 .ghost-preview .piece-block {
     border-style: dashed;
+    border-color: currentColor;
     background: currentColor !important;
+    box-shadow: 0 0 12px currentColor;
 }
 
-.ghost-preview .piece-block::before {
+.ghost-preview .piece-block::before,
+.ghost-preview .piece-block::after {
     display: none;
 }
 
@@ -181,6 +239,11 @@ body {
     background: transparent !important;
     border: 3px solid currentColor;
     box-shadow: 0 0 20px currentColor;
+}
+
+.hint-overlay .piece-block::before,
+.hint-overlay .piece-block::after {
+    display: none;
 }
 
 @keyframes hint-pulse {
@@ -297,7 +360,7 @@ body {
 
 /* Buttons */
 .glass-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--neon-blue), transparent 90%);
     border: 1px solid var(--neon-blue);
     color: var(--neon-blue);
     padding: 12px 24px;
@@ -308,7 +371,9 @@ body {
     backdrop-filter: blur(5px);
     transition: all 0.2s;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    box-shadow:
+        0 0 10px color-mix(in srgb, var(--neon-blue), transparent 70%),
+        inset 0 0 10px color-mix(in srgb, var(--neon-blue), transparent 90%);
     pointer-events: auto;
 }
 
