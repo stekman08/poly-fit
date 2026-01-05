@@ -4,20 +4,20 @@ import { SHAPES, rotateShape, flipShape, normalizeShape } from '../../js/shapes.
 
 describe('Puzzle Generation Performance', () => {
     bench('generatePuzzle (3 pieces)', () => {
-        generatePuzzle(3);
+        generatePuzzle({ numPieces: 3 });
     });
 
     bench('generatePuzzle (4 pieces)', () => {
-        generatePuzzle(4);
+        generatePuzzle({ numPieces: 4 });
     });
 
     bench('generatePuzzle (5 pieces)', () => {
-        generatePuzzle(5);
+        generatePuzzle({ numPieces: 5 });
     });
 
     bench('10 puzzles in sequence', () => {
         for (let i = 0; i < 10; i++) {
-            generatePuzzle(3);
+            generatePuzzle({ numPieces: 3 });
         }
     });
 });

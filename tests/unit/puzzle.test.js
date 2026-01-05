@@ -41,7 +41,7 @@ describe('Puzzle Generation Logic', () => {
     describe('generatePuzzle', () => {
         it('should generate a puzzle with target shape and pieces', () => {
             // Generate a puzzle using 3 pieces
-            const result = generatePuzzle(3);
+            const result = generatePuzzle({ numPieces: 3 });
 
             expect(result).toHaveProperty('targetGrid');
             expect(result).toHaveProperty('pieces');
@@ -60,7 +60,7 @@ describe('Puzzle Generation Logic', () => {
             // Run 50 iterations to ensure all shapes (including W, Y) get tested
             for (let i = 0; i < 50; i++) {
                 const numPieces = 3 + (i % 3); // 3, 4, or 5 pieces
-                const result = generatePuzzle(numPieces);
+                const result = generatePuzzle({ numPieces });
 
                 // Recreate the solution by placing pieces at their solution positions
                 const solutionGrid = createGrid(5, 5);

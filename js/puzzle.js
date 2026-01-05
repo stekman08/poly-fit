@@ -148,11 +148,6 @@ function addHolesToGrid(grid, numHoles, occupiedCells) {
  * @param {string} config.irregularShape - Irregular board shape name (default: null)
  */
 export function generatePuzzle(config = {}) {
-    // Support legacy call: generatePuzzle(3) -> generatePuzzle({numPieces: 3})
-    if (typeof config === 'number') {
-        config = { numPieces: config };
-    }
-
     const {
         numPieces = 3,
         boardRows = GRID_ROWS,
