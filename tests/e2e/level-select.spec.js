@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/coverage.js';
 
 test.describe('Level Select', () => {
     test('level select button hidden when no progress', async ({ page }) => {

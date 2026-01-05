@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/coverage.js';
 
 test.describe('Color Themes', () => {
     test('tapping title cycles theme color', async ({ page }) => {

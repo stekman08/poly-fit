@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/coverage.js';
 
 /**
  * Tests for piece count at different levels based on difficulty curve:

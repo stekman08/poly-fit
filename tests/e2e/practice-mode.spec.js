@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/coverage.js';
 
 test.describe('Practice Mode', () => {
     test('selecting level from level-select enters practice mode', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/coverage.js';
 
 test('secret hint trigger works with tap sequence', async ({ page }) => {
     test.setTimeout(120000); // Allow extra time for CPU starvation scenarios
