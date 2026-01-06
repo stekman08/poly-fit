@@ -398,28 +398,6 @@ body {
 }
 
 
-/* Win Overlay */
-#win-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: auto;
-    opacity: 1;
-    transition: opacity 0.5s;
-    z-index: 100;
-}
-
-#win-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-
 .glass-modal {
     background: rgba(10, 20, 30, 0.9);
     border: 1px solid var(--neon-green);
