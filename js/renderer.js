@@ -33,6 +33,9 @@ export class Renderer {
         // Confetti system (still uses canvas for particle effects)
         this.confetti = new ConfettiSystem();
 
+        // Cache for board state to avoid unnecessary DOM updates
+        this.lastGridState = null;
+
         // Currently dragging
         this.draggingPieceId = null;
 
@@ -94,13 +97,19 @@ export class Renderer {
         return this.cellSize;
     }
 
+    // Check if confetti animation is active (for render loop optimization)
+    isConfettiActive() {
+        return this.confetti.isActive;
+    }
+
     // Main draw function - updates DOM elements
-    draw(game) {
+    // confettiActive param tells us if we need to update canvas (optimization)
+    draw(game, confettiActive = false) {
         this.updateBoard(game.targetGrid);
         this.updatePieces(game.pieces);
 
-        // Update confetti (still canvas-based)
-        if (this.effectsCtx) {
+        // Only update confetti canvas when particles are active
+        if (confettiActive && this.effectsCtx) {
             this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
             this.confetti.update();
             this.confetti.draw(this.effectsCtx);
@@ -116,8 +125,11 @@ export class Renderer {
 
         // Only recreate if dimensions changed
         const currentCells = this.boardEl.querySelectorAll('.board-cell').length;
-        if (currentCells !== rows * cols) {
+        const needsRebuild = currentCells !== rows * cols;
+
+        if (needsRebuild) {
             this.boardEl.innerHTML = '';
+            this.lastGridState = null; // Force cell state update after rebuild
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
@@ -130,7 +142,14 @@ export class Renderer {
             }
         }
 
-        // Update cell states
+        // Skip cell state updates if grid hasn't changed
+        // (Grid is static during gameplay - only changes on new level)
+        if (this.lastGridState === grid) {
+            return;
+        }
+        this.lastGridState = grid;
+
+        // Update cell states (only runs once per level)
         const cells = this.boardEl.querySelectorAll('.board-cell');
         let i = 0;
         for (let r = 0; r < rows; r++) {
@@ -381,6 +400,7 @@ export class Renderer {
 
     clearEffects() {
         this.confetti.clear();
+        this.lastGridState = null; // Reset cache for new level
         if (this.effectsCtx) {
             this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
         }

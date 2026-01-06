@@ -81,6 +81,16 @@ let currentThemeIndex = 0;
 let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
 const MAX_GENERATION_RETRIES = 10; // Higher for complex puzzles at level 200+
 
+// Dirty flag for render optimization - only redraw when something changed
+let needsRender = true;
+
+// Request a render on next frame (call this when game state changes)
+function requestRender() {
+    needsRender = true;
+}
+// Expose globally for input handler
+window.requestRender = requestRender;
+
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {
     const timesShown = parseInt(safeGetItem(TUTORIAL_STORAGE_KEY, '0'), 10);
@@ -102,17 +112,24 @@ function hideTutorial() {
 
 function loop() {
     if (game) {
+        // Check hint timer (doesn't need render, just time check)
         if (!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) {
             const hint = game.getHint();
             if (hint) {
                 renderer.showHint(hint);
+                needsRender = true;
             }
             // Mark as checked regardless of whether hint was shown
             // (prevents recalculating every frame if no hint available)
             hintShown = true;
         }
 
-        renderer.draw(game);
+        // Only render when something changed OR confetti is animating
+        const confettiActive = renderer.isConfettiActive();
+        if (needsRender || confettiActive) {
+            renderer.draw(game, confettiActive);
+            needsRender = false;
+        }
     }
     requestAnimationFrame(loop);
 }
@@ -311,6 +328,8 @@ function startLevelWithData(puzzleData) {
 
 function onInteraction(checkWin = false) {
     lastInteractionTime = Date.now();
+    needsRender = true; // Request render on any interaction
+
     if (hintShown) {
         renderer.hideHint();
         hintShown = false;
@@ -321,6 +340,7 @@ function onInteraction(checkWin = false) {
         sounds.playWin();
         haptics.vibrateWin();
         renderer.triggerWinEffect();
+        needsRender = true; // Start confetti animation
 
         // INSTANT FLOW: Short delay then advance to next level
         setTimeout(() => {
