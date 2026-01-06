@@ -43,7 +43,7 @@ body {
     height: 100%;
     max-width: 600px;
     margin: 0 auto;
-    background: radial-gradient(circle at center, #1a1c29 0%, #050505 100%);
+    background: linear-gradient(to bottom, #1a1c29 0%, #0a0a10 40%, #050505 100%);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -70,38 +70,40 @@ body {
     box-sizing: border-box;
 }
 
-.board-cell.target {
-    background: rgba(12, 0, 25, 0.6);
-    border: 2px solid rgba(213, 0, 249, 0.35);
-    box-shadow:
-        inset 0 4px 12px rgba(0, 0, 0, 0.7),
-        inset 0 0 20px rgba(213, 0, 249, 0.15),
-        0 0 8px rgba(0, 0, 0, 0.6);
+/* Holes - empty spaces INSIDE the puzzle shape */
+.board-cell.hole {
     border-radius: 4px;
-    /* Subtle breathing animation */
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+
+.board-cell.target {
+    background: rgba(25, 5, 45, 0.8);
+    border: 2px solid rgba(213, 0, 249, 0.5);
+    box-shadow:
+        inset 0 4px 12px rgba(0, 0, 0, 0.6),
+        inset 0 0 20px rgba(213, 0, 249, 0.2),
+        0 0 8px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    /* Subtle breathing animation - uses opacity instead of box-shadow for better performance */
     animation: board-pulse 4s infinite alternate ease-in-out;
+    will-change: opacity, border-color;
 }
 
 @keyframes board-pulse {
     from {
         border-color: rgba(213, 0, 249, 0.35);
-        box-shadow:
-            inset 0 4px 12px rgba(0, 0, 0, 0.7),
-            inset 0 0 20px rgba(213, 0, 249, 0.15),
-            0 0 8px rgba(0, 0, 0, 0.6);
+        opacity: 1;
     }
 
     to {
         border-color: rgba(213, 0, 249, 0.55);
-        box-shadow:
-            inset 0 4px 12px rgba(0, 0, 0, 0.7),
-            inset 0 0 25px rgba(213, 0, 249, 0.25),
-            0 0 12px rgba(213, 0, 249, 0.1);
+        opacity: 0.85;
     }
 }
 
-.board-cell.outside,
-.board-cell.hole {
+/* Outside cells (cutouts) - completely invisible */
+.board-cell.outside {
     background: transparent;
     border: none;
 }
@@ -796,4 +798,12 @@ body {
     50% {
         opacity: 0.7;
     }
+}
+
+#loading-overlay #btn-retry {
+    margin-top: 20px;
+}
+
+#loading-overlay #btn-retry.hidden {
+    display: none;
 }

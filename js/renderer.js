@@ -8,39 +8,24 @@ import { getDockY } from './config/constants.js';
  */
 export class Renderer {
     constructor() {
-        // DOM elements
         this.boardEl = document.getElementById('game-board');
         this.dockEl = document.getElementById('piece-dock');
         this.effectsCanvas = document.getElementById('effects-canvas');
         this.effectsCtx = this.effectsCanvas?.getContext('2d');
 
-        // Board dimensions
         this.boardRows = 5;
         this.boardCols = 5;
-
-        // Cell size (calculated on resize)
         this.cellSize = 50;
 
-        // Track created piece elements
         this.pieceElements = new Map();
-
-        // Ghost preview element
         this.ghostEl = null;
-
-        // Hint element
         this.hintEl = null;
-
-        // Confetti system (still uses canvas for particle effects)
         this.confetti = new ConfettiSystem();
-
-        // Cache for board state to avoid unnecessary DOM updates
         this.lastGridState = null;
 
-        // Currently dragging
         this.draggingPieceId = null;
         this.dragStartGridPos = null;
 
-        // Resize handling
         window.addEventListener('resize', () => this.resize());
         this.resize();
     }
@@ -54,12 +39,10 @@ export class Renderer {
     }
 
     resize() {
-        // Update CSS variables for grid sizing
         this.boardEl.style.setProperty('--rows', this.boardRows);
         this.boardEl.style.setProperty('--cols', this.boardCols);
 
-        // Calculate cell size - uniform size everywhere (no scaling)
-        // Target: ~40px cells, similar to what dock pieces were at scale(0.5)
+        // Target ~40px cells, constrained by container
         const containerWidth = Math.min(window.innerWidth, 600) - 40;
         const containerHeight = window.innerHeight * 0.30;
         const maxCellSize = 40;
@@ -69,22 +52,18 @@ export class Renderer {
             maxCellSize
         ));
 
-        // Set on container so it's available for pieces in dock too
         this.boardEl.parentElement.style.setProperty('--cell-size', `${this.cellSize}px`);
 
-        // Resize effects canvas
         if (this.effectsCanvas) {
             this.effectsCanvas.width = window.innerWidth;
             this.effectsCanvas.height = window.innerHeight;
         }
     }
 
-    // Get board position for coordinate calculations
     getBoardRect() {
         return this.boardEl.getBoundingClientRect();
     }
 
-    // Convert pixel position to grid coordinates
     pixelToGrid(px, py) {
         const rect = this.getBoardRect();
         return {
@@ -93,7 +72,6 @@ export class Renderer {
         };
     }
 
-    // Get cell size for external calculations
     get gridSize() {
         return this.cellSize;
     }
@@ -110,7 +88,7 @@ export class Renderer {
         this.updatePieces(game.pieces);
 
         // Only update confetti canvas when particles are active
-        if (confettiActive && this.effectsCtx) {
+        if (confettiActive && this.effectsCtx && this.effectsCanvas) {
             this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
             this.confetti.update();
             this.confetti.draw(this.effectsCtx);
@@ -159,8 +137,20 @@ export class Renderer {
                 const value = grid[r][c];
 
                 cell.classList.toggle('target', value === 1);
-                cell.classList.toggle('hole', value === -1);
-                cell.classList.toggle('outside', value === -2);
+
+                // Check if this empty cell looks like a hole (surrounded by targets)
+                let isVisualHole = false;
+                if (value === 0) {
+                    const hasTop = r > 0 && grid[r - 1][c] === 1;
+                    const hasBottom = r < rows - 1 && grid[r + 1][c] === 1;
+                    const hasLeft = c > 0 && grid[r][c - 1] === 1;
+                    const hasRight = c < cols - 1 && grid[r][c + 1] === 1;
+                    // It's a visual hole only if completely surrounded (all 4 sides)
+                    isVisualHole = hasTop && hasBottom && hasLeft && hasRight;
+                }
+
+                cell.classList.toggle('hole', value === -1 || isVisualHole);
+                cell.classList.toggle('outside', value === -2 || (value === 0 && !isVisualHole));
             }
         }
     }
@@ -183,11 +173,6 @@ export class Renderer {
 
             // Determine state
             const isDragging = piece.id === this.draggingPieceId;
-
-            if (isDragging) {
-                // Debug log to verify renderer sees the drag state
-                // console.log('Renderer: dragging piece', piece.id);
-            }
 
             const inDock = piece.y >= dockY;
             const onBoard = !inDock && !isDragging;
@@ -259,9 +244,10 @@ export class Renderer {
             }
         });
 
-        // Remove orphaned piece elements
+        // Remove orphaned piece elements (O(n) using Set instead of O(n*m) with find)
+        const currentPieceIds = new Set(pieces.map(p => p.id));
         for (const [id, el] of this.pieceElements) {
-            if (!pieces.find(p => p.id === id)) {
+            if (!currentPieceIds.has(id)) {
                 el.remove();
                 this.pieceElements.delete(id);
             }

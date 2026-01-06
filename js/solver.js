@@ -6,6 +6,7 @@ import { createGrid } from './utils.js';
  */
 
 // Cache for unique orientations to avoid re-computing during recursive calls
+// Note: Cache size is naturally bounded by the number of unique shapes (~14)
 const orientationCache = new Map();
 
 /**
@@ -62,7 +63,9 @@ export function countSolutions(targetGrid, pieces, limit = 10) {
     }));
 
     // Mask for tracking used pieces (index based)
-    const usedPiecesMask = 0; // Bitmask, supports up to 32 pieces (game max is much lower)
+    // NOTE: JavaScript bitwise ops use 32-bit signed integers, limiting to 31 pieces max.
+    // Game currently caps at 7 pieces, so this is safe.
+    const usedPiecesMask = 0;
 
     return solveRecursive(targetGrid, solverPieces, usedPiecesMask, occupiedMask, limit, 0);
 }
@@ -84,9 +87,6 @@ function solveRecursive(targetGrid, pieces, usedPiecesMask, occupiedMask, limit,
     let fx = -1, fy = -1;
     let found = false;
 
-    // We can iterate occupiedMask to find 0, AND check targetGrid is 1
-    // Optimization: we could pass fx, fy from previous step, but grid changes.
-    // Brute scan is fine for small grids.
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             if (targetGrid[y][x] === 1 && occupiedMask[y][x] === 0) {
@@ -108,12 +108,10 @@ function solveRecursive(targetGrid, pieces, usedPiecesMask, occupiedMask, limit,
     let count = 0;
 
     for (let i = 0; i < pieces.length; i++) {
-        // If piece i is already used, skip
         if ((usedPiecesMask & (1 << i)) !== 0) continue;
 
         const piece = pieces[i];
 
-        // Try all orientations of this piece
         for (const shape of piece.orientations) {
             // Try to anchor the shape such that one of its blocks lands on (fx, fy)
             for (const block of shape) {
@@ -121,17 +119,12 @@ function solveRecursive(targetGrid, pieces, usedPiecesMask, occupiedMask, limit,
                 const startX = fx - block.x;
                 const startY = fy - block.y;
 
-                // Valid placement?
                 if (canPlaceShape(targetGrid, occupiedMask, shape, startX, startY)) {
-                    // Place
                     placeShape(occupiedMask, shape, startX, startY, 1);
 
-                    // Recurse
-                    // Mark piece i as used
                     const newUsedMask = usedPiecesMask | (1 << i);
                     count += solveRecursive(targetGrid, pieces, newUsedMask, occupiedMask, limit - count, placedCount + 1);
 
-                    // Backtrack
                     placeShape(occupiedMask, shape, startX, startY, 0);
 
                     if (count >= limit) return count;
@@ -151,13 +144,8 @@ function canPlaceShape(targetGrid, occupiedMask, shape, startX, startY) {
         const x = startX + block.x;
         const y = startY + block.y;
 
-        // Bounds check
         if (x < 0 || x >= cols || y < 0 || y >= rows) return false;
-
-        // Target shape check (must be on a '1')
         if (targetGrid[y][x] !== 1) return false;
-
-        // Collision check
         if (occupiedMask[y][x] !== 0) return false;
     }
     return true;

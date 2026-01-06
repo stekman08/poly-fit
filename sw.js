@@ -1,7 +1,23 @@
-// Version: 84dbd19 • 2026-01-06 14:20
+// Version: b5338f8 • 2026-01-06 23:32
 // PolyFit Service Worker
-// Cache name will be set dynamically based on version
-let CACHE_NAME = 'polyfit-v1'; // fallback
+
+// Cache name resolved once and reused (prevents race conditions)
+const CACHE_NAME_FALLBACK = 'polyfit-v1';
+let resolvedCacheName = null;
+
+async function getCacheName() {
+    if (resolvedCacheName) return resolvedCacheName;
+
+    try {
+        const response = await fetch('./version.json');
+        const versionInfo = await response.json();
+        resolvedCacheName = `polyfit-${versionInfo.hash}`;
+    } catch {
+        resolvedCacheName = CACHE_NAME_FALLBACK;
+    }
+    console.log(`[Service Worker] Using cache: ${resolvedCacheName}`);
+    return resolvedCacheName;
+}
 
 const ASSETS_TO_CACHE = [
   './',
@@ -36,18 +52,8 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing...');
   event.waitUntil(
-    fetch('./version.json')
-      .then(response => response.json())
-      .then(versionInfo => {
-        CACHE_NAME = `polyfit-${versionInfo.hash}`;
-        console.log(`[Service Worker] Using cache: ${CACHE_NAME}`);
-        return caches.open(CACHE_NAME);
-      })
-      .catch(() => {
-        // Fallback if version.json doesn't exist
-        console.log('[Service Worker] Using fallback cache name');
-        return caches.open(CACHE_NAME);
-      })
+    getCacheName()
+      .then(cacheName => caches.open(cacheName))
       .then((cache) => {
         console.log('[Service Worker] Caching assets');
         return cache.addAll(ASSETS_TO_CACHE);
@@ -60,17 +66,19 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Delete all caches except current one (starts with 'polyfit-')
-          if (cacheName.startsWith('polyfit-') && cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    getCacheName().then(currentCacheName =>
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            // Delete all caches except current one (starts with 'polyfit-')
+            if (cacheName.startsWith('polyfit-') && cacheName !== currentCacheName) {
+              console.log('[Service Worker] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+    ).then(() => self.clients.claim())
   );
 });
 
@@ -79,28 +87,25 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - return response
         if (response) {
           return response;
         }
 
-        // Clone the request
         const fetchRequest = event.request.clone();
 
         return fetch(fetchRequest).then((response) => {
-          // Check if valid response
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
 
-          // Clone the response
           const responseToCache = response.clone();
 
-          // Cache the fetched resource
-          caches.open(CACHE_NAME)
-            .then((cache) => {
+          // Cache the fetched resource (fire-and-forget)
+          getCacheName().then(cacheName => {
+            caches.open(cacheName).then((cache) => {
               cache.put(event.request, responseToCache);
             });
+          });
 
           return response;
         }).catch(() => {

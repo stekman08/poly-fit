@@ -4,18 +4,14 @@ import { rotateShape, flipShape, normalizeShape } from './shapes.js';
 export class Game {
     constructor(puzzleData) {
         this.targetGrid = puzzleData.targetGrid;
-        // Deep copy pieces to avoid mutating original puzzle data
         this.pieces = puzzleData.pieces.map(p => ({
             ...p,
-            x: -100, // Initial off-screen position or specific holding area
+            x: -100,
             y: -100,
             rotation: 0,
             flipped: false,
-            // We cache the transformed shape for rendering/collision
-            currentShape: p.shape // Start with base shape
+            currentShape: p.shape
         }));
-
-        // Hint state
         this.hintPiece = null;
         this.hintShape = null;
     }
@@ -127,7 +123,8 @@ export class Game {
         }
 
         // 2. Compare currentGrid with targetGrid
-        // Grid values: -1 = hole (blocked), 0 = wall, 1 = valid target spot
+        // Grid cell values (see puzzle.js for canonical documentation):
+        // -2 = outside (cutout), -1 = hole (blocked), 0 = empty, 1 = target spot
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
                 const targetVal = this.targetGrid[y][x];

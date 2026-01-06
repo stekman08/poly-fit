@@ -1,4 +1,3 @@
-import { generatePuzzle } from './puzzle.js';
 import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import { InputHandler } from './input.js';
@@ -50,7 +49,7 @@ function safeSetItem(key, value) {
     try {
         localStorage.setItem(key, value);
     } catch {
-        // Silently fail - storage unavailable
+        // Storage unavailable
     }
 }
 
@@ -144,12 +143,10 @@ generationWorker.onmessage = function (e) {
     const { type, puzzle, error, reqId } = e.data;
 
     if (type === 'PUZZLE_GENERATED') {
-        console.log(`[Worker] Puzzle generated for Level ${puzzle.level || '?'}`);
         generationRetryCount = 0; // Reset on success
 
         if (pendingLevelStart) {
             // We were waiting for this!
-            const cb = pendingLevelStart;
             pendingLevelStart = null;
             document.getElementById('loading-overlay').classList.add('hidden');
             startLevelWithData(puzzle);
@@ -159,7 +156,6 @@ generationWorker.onmessage = function (e) {
         }
         isGenerating = false;
     } else if (type === 'ERROR') {
-        console.error('[Worker] Generation error:', error);
         isGenerating = false;
 
         if (pendingLevelStart) {
@@ -167,18 +163,19 @@ generationWorker.onmessage = function (e) {
 
             generationRetryCount++;
             if (generationRetryCount > MAX_GENERATION_RETRIES) {
-                console.error('[Game] Max generation retries reached. Giving up.');
-                document.querySelector('#loading-overlay h2').textContent = 'GENERATION FAILED';
-                document.querySelector('#loading-overlay p').textContent = 'Please reload to try again.';
-                // document.getElementById('loading-overlay').classList.add('hidden'); // Keep it visible to show error
+                const loadingTitle = document.querySelector('#loading-overlay h2');
+                const loadingMessage = document.querySelector('#loading-overlay p');
+                const retryBtn = document.getElementById('btn-retry');
+                if (loadingTitle) loadingTitle.textContent = 'GENERATION FAILED';
+                if (loadingMessage) loadingMessage.textContent = 'Could not generate puzzle.';
+                if (retryBtn) retryBtn.classList.remove('hidden');
                 pendingLevelStart = null;
                 isGenerating = false;
                 return;
             }
 
-            console.warn(`[Game] Generation failed (Attempt ${generationRetryCount}/${MAX_GENERATION_RETRIES}). Retrying...`);
-
             // Re-post message to worker for retry
+            isGenerating = true;
             const config = getDifficultyParams(level);
             config.level = level;
             generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
@@ -192,7 +189,6 @@ function preGenerateNextLevel(nextLevel) {
     // Don't pre-generate if we already have the right one
     if (preGeneratedPuzzle && preGeneratedPuzzle.level === nextLevel) return;
 
-    console.log(`[Worker] Pre-generating Level ${nextLevel}...`);
     isGenerating = true;
     generationRetryCount = 0; // Reset for new attempt
     preGeneratedPuzzle = null; // Clear old
@@ -211,7 +207,6 @@ function preGenerateNextLevel(nextLevel) {
 function startLevel() {
     // Check if we have a pre-generated puzzle for this level
     if (preGeneratedPuzzle && preGeneratedPuzzle.level === level) {
-        console.log(`[Game] Using pre-generated puzzle for Level ${level}`);
         const p = preGeneratedPuzzle;
         preGeneratedPuzzle = null;
         startLevelWithData(p);
@@ -226,7 +221,6 @@ function startLevel() {
     if (isGenerating) {
         // We assume the worker is working on 'level' because we request it on level up
         // But strictly we should track request ID. For now assume sequential play.
-        console.log(`[Game] Waiting for generation...`);
         document.getElementById('loading-overlay').classList.remove('hidden');
         pendingLevelStart = () => { }; // Marker that we are waiting
         return;
@@ -234,7 +228,6 @@ function startLevel() {
 
     // Nothing pre-generated, and not generating. Start now.
     // This happens on first load, or jumping levels.
-    console.log(`[Game] Cache miss. Generating Level ${level} now...`);
     document.getElementById('loading-overlay').classList.remove('hidden');
     // Prepare for generation
     // Reset error text in case we showed failure before
@@ -311,8 +304,7 @@ function startLevelWithData(puzzleData) {
         });
 
     } catch (e) {
-        console.error("Setup failed", e);
-        // Fallback or alert?
+        console.error('startLevelWithData failed:', e);
         return;
     }
 
@@ -322,6 +314,7 @@ function startLevelWithData(puzzleData) {
     hintShown = false;
     isWinning = false;
     levelDisplay.innerText = `LEVEL ${level}`;
+    needsRender = true; // Force render after setting up game
 }
 
 function onInteraction(checkWin = false) {
@@ -467,8 +460,7 @@ function setupCheatCode() {
             currentCount = 0;
 
             if (currentStep >= SEQUENCE.length) {
-                // Sequence complete!
-                console.log('Cheat Activated: Force Hint');
+                // Sequence complete - force hint
                 lastInteractionTime = 0;
                 haptics.vibrateWin();
                 reset();
@@ -560,6 +552,28 @@ const btnMenu = document.getElementById('btn-menu');
 if (btnMenu) {
     btnMenu.addEventListener('click', () => {
         showStartScreen();
+    });
+}
+
+// Retry button for generation failures
+const btnRetry = document.getElementById('btn-retry');
+if (btnRetry) {
+    btnRetry.addEventListener('click', () => {
+        // Reset UI state
+        const loadingTitle = document.querySelector('#loading-overlay h2');
+        const loadingMessage = document.querySelector('#loading-overlay p');
+        if (loadingTitle) loadingTitle.textContent = 'GENERATING...';
+        if (loadingMessage) loadingMessage.textContent = 'Constructing tight puzzle...';
+        btnRetry.classList.add('hidden');
+
+        // Reset generation state and retry
+        generationRetryCount = 0;
+        isGenerating = true;
+        pendingLevelStart = () => { };
+
+        const config = getDifficultyParams(level);
+        config.level = level;
+        generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
     });
 }
 

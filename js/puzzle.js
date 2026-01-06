@@ -241,7 +241,6 @@ export function generatePuzzle(config = {}) {
                 const count = countSolutions(grid, solverPieces, MAX_SOLUTIONS + 1);
 
                 if (count > MAX_SOLUTIONS) {
-                    // console.warn(`Puzzle too loose (${count} solutions), discarding. (Retries: ${retries})`);
                     retries++;
                     continue;
                 }
@@ -269,10 +268,8 @@ export function generatePuzzle(config = {}) {
             let totalBlocks = pieces.reduce((sum, p) => sum + p.shape.length, 0);
 
             if (targetSpots !== totalBlocks) {
-                console.error('Puzzle verification failed: target/blocks mismatch',
-                    { targetSpots, totalBlocks });
                 retries++;
-                continue; // Try again
+                continue;
             }
 
             // CRITICAL: Verify the solution actually works by simulating placement
@@ -323,9 +320,8 @@ export function generatePuzzle(config = {}) {
             }
 
             if (!solutionValid) {
-                console.error('Puzzle verification failed: solution does not recreate target grid');
                 retries++;
-                continue; // Try again
+                continue;
             }
 
             return {
@@ -371,11 +367,10 @@ export function generatePuzzle(config = {}) {
                             for (let i = 0; i < r; i++) testShape = rotateShape(testShape);
                             testShape = normalizeShape(testShape);
 
-                            // Compare shapes (both normalized, so direct comparison works)
+                            // Compare shapes using Set for order-independent comparison
+                            const testSet = new Set(testShape.map(b => `${b.x},${b.y}`));
                             const match = testShape.length === solutionShape.length &&
-                                testShape.every((b, idx) =>
-                                    b.x === solutionShape[idx].x && b.y === solutionShape[idx].y
-                                );
+                                solutionShape.every(b => testSet.has(`${b.x},${b.y}`));
 
                             if (match) {
                                 effectiveRotation = r;

@@ -13,15 +13,22 @@ class SoundManager {
     // Lazy init audio context (must be after user interaction)
     init() {
         if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    this.audioContext = new AudioCtx();
+                }
+            } catch {
+                this.enabled = false;
+                return;
+            }
         }
         // Resume if suspended (mobile browsers)
-        if (this.audioContext.state === 'suspended') {
+        if (this.audioContext?.state === 'suspended') {
             this.audioContext.resume();
         }
     }
 
-    // Quick blip for rotate
     playRotate() {
         if (!this.enabled) return;
         this.init();
@@ -43,7 +50,6 @@ class SoundManager {
         osc.stop(this.audioContext.currentTime + 0.08);
     }
 
-    // Lower blip for flip
     playFlip() {
         if (!this.enabled) return;
         this.init();
@@ -65,7 +71,6 @@ class SoundManager {
         osc.stop(this.audioContext.currentTime + 0.12);
     }
 
-    // Satisfying snap sound
     playSnap() {
         if (!this.enabled) return;
         this.init();
@@ -87,7 +92,6 @@ class SoundManager {
         osc.stop(this.audioContext.currentTime + 0.08);
     }
 
-    // Victory fanfare - ascending arpeggio
     playWin() {
         if (!this.enabled) return;
         this.init();
@@ -117,5 +121,4 @@ class SoundManager {
     }
 }
 
-// Singleton
 export const sounds = new SoundManager();

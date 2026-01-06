@@ -5,10 +5,8 @@ self.onmessage = function (e) {
 
     if (type === 'GENERATE') {
         try {
-            // Generate the puzzle with the provided configuration
             const puzzle = generatePuzzle(config);
 
-            // Send back the result
             self.postMessage({
                 type: 'PUZZLE_GENERATED',
                 puzzle,

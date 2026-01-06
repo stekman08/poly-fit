@@ -8,13 +8,17 @@ export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
     let hasBlockOnBoard = false;
     let hasBlockOutsideBoard = false;
 
-    const occupiedCells = new Set();
-    for (const piece of otherPieces) {
-        for (const block of piece.currentShape) {
-            const px = piece.x + block.x;
-            const py = piece.y + block.y;
-            if (py >= 0 && py < rows) {
-                occupiedCells.add(`${px},${py}`);
+    // Only build occupancy Set if there are other pieces (optimization)
+    let occupiedCells = null;
+    if (otherPieces.length > 0) {
+        occupiedCells = new Set();
+        for (const piece of otherPieces) {
+            for (const block of piece.currentShape) {
+                const px = piece.x + block.x;
+                const py = piece.y + block.y;
+                if (py >= 0 && py < rows) {
+                    occupiedCells.add(`${px},${py}`);
+                }
             }
         }
     }
@@ -28,11 +32,10 @@ export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
             if (bx < 0 || bx >= cols || grid[by][bx] !== 1) {
                 return false;
             }
-            if (occupiedCells.has(`${bx},${by}`)) {
+            if (occupiedCells?.has(`${bx},${by}`)) {
                 return false;
             }
         } else {
-            // Block is outside the board (above or below)
             hasBlockOutsideBoard = true;
         }
     }
