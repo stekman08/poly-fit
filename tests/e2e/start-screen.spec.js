@@ -83,4 +83,25 @@ test.describe('Start Screen', () => {
         });
         expect(maxLevel).toBe('10');
     });
+
+    test('URL parameter ?level=XXX sets progress', async ({ page }) => {
+        // Clear any existing progress
+        await page.goto('/');
+        await page.evaluate(() => localStorage.clear());
+
+        // Navigate with level parameter
+        await page.goto('/?level=42');
+        await page.waitForSelector('#start-screen');
+
+        // Should have saved maxLevel to localStorage
+        const maxLevel = await page.evaluate(() => localStorage.getItem('polyfit-max-level'));
+        expect(maxLevel).toBe('42');
+
+        // Continue button should show level 42
+        const continueBtn = page.locator('#btn-continue');
+        await expect(continueBtn).toContainText('Level 42');
+
+        // URL should be cleaned (no ?level=42)
+        expect(page.url()).not.toContain('level=');
+    });
 });

@@ -60,6 +60,20 @@ const renderer = new Renderer();
 let game = null;
 let level = 1;
 let maxLevel = parseInt(safeGetItem('polyfit-max-level', '1'), 10) || 1;
+
+// URL parameter: ?level=XXX sets progress (useful for restoring after PWA reinstall)
+const urlParams = new URLSearchParams(window.location.search);
+const urlLevel = parseInt(urlParams.get('level'), 10);
+if (urlLevel && urlLevel > 0) {
+    level = urlLevel;
+    if (urlLevel > maxLevel) {
+        maxLevel = urlLevel;
+        safeSetItem('polyfit-max-level', String(maxLevel));
+    }
+    // Clean URL without reload (removes ?level=XXX)
+    window.history.replaceState({}, '', window.location.pathname);
+}
+
 let lastInteractionTime = Date.now();
 let hintShown = false;
 let isWinning = false;
