@@ -303,7 +303,8 @@ function startLevelWithData(puzzleData) {
             rowMaxHeight = Math.max(rowMaxHeight, pieceHeight);
         });
 
-    } catch {
+    } catch (e) {
+        console.error('startLevelWithData failed:', e);
         return;
     }
 
@@ -313,6 +314,7 @@ function startLevelWithData(puzzleData) {
     hintShown = false;
     isWinning = false;
     levelDisplay.innerText = `LEVEL ${level}`;
+    needsRender = true; // Force render after setting up game
 }
 
 function onInteraction(checkWin = false) {

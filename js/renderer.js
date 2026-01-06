@@ -137,8 +137,20 @@ export class Renderer {
                 const value = grid[r][c];
 
                 cell.classList.toggle('target', value === 1);
-                cell.classList.toggle('hole', value === -1);
-                cell.classList.toggle('outside', value === -2);
+
+                // Check if this empty cell looks like a hole (surrounded by targets)
+                let isVisualHole = false;
+                if (value === 0) {
+                    const hasTop = r > 0 && grid[r - 1][c] === 1;
+                    const hasBottom = r < rows - 1 && grid[r + 1][c] === 1;
+                    const hasLeft = c > 0 && grid[r][c - 1] === 1;
+                    const hasRight = c < cols - 1 && grid[r][c + 1] === 1;
+                    // It's a visual hole only if completely surrounded (all 4 sides)
+                    isVisualHole = hasTop && hasBottom && hasLeft && hasRight;
+                }
+
+                cell.classList.toggle('hole', value === -1 || isVisualHole);
+                cell.classList.toggle('outside', value === -2 || (value === 0 && !isVisualHole));
             }
         }
     }
