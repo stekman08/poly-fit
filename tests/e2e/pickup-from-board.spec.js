@@ -19,47 +19,22 @@ test.describe('Pickup from board bug', () => {
     test('piece should stay near cursor when picked up from board', async ({ page }) => {
         await startGame(page);
 
-        // Step 1: Place a piece on the board via JavaScript (ensures valid placement)
+        // Step 1: Place a piece on the board at its SOLUTION position (always valid)
+        // Using solution position avoids flakiness from random initial rotations
         const setupResult = await page.evaluate(() => {
             const game = window.game;
             const piece = game.pieces[0];
-            const grid = game.targetGrid;
 
-            // Find a valid placement position
-            const shape = piece.currentShape;
-            let validX = -1, validY = -1;
-
-            outer:
-            for (let y = 0; y < grid.length; y++) {
-                for (let x = 0; x < grid[0].length; x++) {
-                    // Check if all blocks of the shape fit at this position
-                    let valid = true;
-                    for (const block of shape) {
-                        const bx = x + block.x;
-                        const by = y + block.y;
-                        if (by < 0 || by >= grid.length || bx < 0 || bx >= grid[0].length) {
-                            valid = false;
-                            break;
-                        }
-                        if (grid[by][bx] !== 1) {
-                            valid = false;
-                            break;
-                        }
-                    }
-                    if (valid) {
-                        validX = x;
-                        validY = y;
-                        break outer;
-                    }
-                }
-            }
-
-            if (validX >= 0) {
-                game.updatePieceState(piece.id, { x: validX, y: validY });
-                window.requestRender && window.requestRender();
-                return { id: piece.id, x: validX, y: validY, success: true };
-            }
-            return { success: false, message: 'No valid position found' };
+            // Place piece at its solution position with correct rotation/flip
+            // This is guaranteed to be valid since the puzzle was generated with this solution
+            game.updatePieceState(piece.id, {
+                x: piece.solutionX,
+                y: piece.solutionY,
+                rotation: piece.effectiveRotation,
+                flipped: piece.effectiveFlipped
+            });
+            window.requestRender && window.requestRender();
+            return { id: piece.id, x: piece.solutionX, y: piece.solutionY, success: true };
         });
 
         console.log('Setup result:', setupResult);
