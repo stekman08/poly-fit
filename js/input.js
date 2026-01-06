@@ -38,8 +38,9 @@ export class InputHandler {
         // Prevent mouse events from firing after touch events (browser compatibility behavior)
         this.lastTouchTime = 0;
 
-        // Offset from piece origin to touch point
-        this.touchOffset = { x: 0, y: 0 };
+        // Drag start position tracking (for delta-based movement)
+        this.dragStartGridPos = null;
+        this.dragStartScreenPos = null;
 
         this.bindEvents();
     }
@@ -170,12 +171,20 @@ export class InputHandler {
         this.dragStartTime = Date.now();
         this.activeTouchId = isTouch ? touchId : null;
 
-        // Calculate offset from piece's visual position to touch point
+        // Calculate the piece's ACTUAL grid position from its DOM position
+        // This is crucial because dock pieces use flexbox positioning (piece.x/y are virtual),
+        // while board pieces use absolute positioning (piece.x/y match grid coords).
+        // By calculating from DOM, we get consistent behavior for both.
         const pieceRect = pieceEl.getBoundingClientRect();
-        this.touchOffset = {
-            x: clientX - pieceRect.left,
-            y: clientY - pieceRect.top
-        };
+        const boardRect = this.renderer.getBoardRect();
+        const cellSize = this.renderer.cellSize;
+
+        // Convert piece's top-left corner from screen pixels to board grid coordinates
+        const actualGridX = (pieceRect.left - boardRect.left) / cellSize;
+        const actualGridY = (pieceRect.top - boardRect.top) / cellSize;
+
+        this.dragStartGridPos = { x: actualGridX, y: actualGridY };
+        this.dragStartScreenPos = { x: clientX, y: clientY };
 
         // Move piece to front (end of array)
         const idx = this.game.pieces.indexOf(piece);
@@ -203,14 +212,21 @@ export class InputHandler {
         if (!this.isDragging && dist > TAP_MAX_DISTANCE) {
             this.isDragging = true;
             this.renderer.draggingPieceId = this.draggingPiece.id;
+            // Pass original grid position to renderer for accurate offset calculation
+            this.renderer.dragStartGridPos = { ...this.dragStartGridPos };
         }
 
         if (this.isDragging) {
-            // Convert screen position to grid position
-            const gridPos = this.renderer.pixelToGrid(
-                clientX - this.touchOffset.x,
-                clientY - this.touchOffset.y
-            );
+            // Calculate delta movement in screen pixels, then convert to grid units
+            const cellSize = this.renderer.cellSize;
+            const deltaX = (clientX - this.dragStartScreenPos.x) / cellSize;
+            const deltaY = (clientY - this.dragStartScreenPos.y) / cellSize;
+
+            // Apply delta to original grid position
+            const gridPos = {
+                x: this.dragStartGridPos.x + deltaX,
+                y: this.dragStartGridPos.y + deltaY
+            };
 
             // Update piece position (fractional during drag)
             this.game.updatePieceState(this.draggingPiece.id, {
@@ -288,33 +304,35 @@ export class InputHandler {
     handleRotate() {
         const piece = this.draggingPiece;
         const boardRows = this.getBoardRows();
-        const dockY = getDockY(boardRows);
+        const wasOnBoard = piece.y < boardRows;
 
-        // Don't allow rotation of pieces already placed on board
-        if (piece.y < dockY) {
-            return;
-        }
-
+        // Always allow rotation
         const newRot = (piece.rotation + 1) % 4;
         this.game.updatePieceState(piece.id, { rotation: newRot });
         sounds.playRotate();
         haptics.vibrateRotate();
+
+        // Only snap if piece was on the board (not in dock)
+        if (wasOnBoard) {
+            this.snapToValidPosition(piece);
+        }
         this.onInteraction();
     }
 
     handleFlip() {
         const piece = this.draggingPiece;
         const boardRows = this.getBoardRows();
-        const dockY = getDockY(boardRows);
+        const wasOnBoard = piece.y < boardRows;
 
-        // Don't allow flip of pieces already placed on board
-        if (piece.y < dockY) {
-            return;
-        }
-
+        // Always allow flip
         this.game.updatePieceState(piece.id, { flipped: !piece.flipped });
         sounds.playFlip();
         haptics.vibrateFlip();
+
+        // Only snap if piece was on the board (not in dock)
+        if (wasOnBoard) {
+            this.snapToValidPosition(piece);
+        }
         this.onInteraction();
     }
 
@@ -410,6 +428,54 @@ export class InputHandler {
         return candidates.length > 0 ? candidates[0] : { x: 0, y: dockY };
     }
 
+    snapToValidPosition(piece) {
+        const shape = piece.currentShape;
+        const boardRows = this.game.targetGrid?.length || 5;
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+
+        const currentX = Math.round(piece.x);
+        const currentY = Math.round(piece.y);
+
+        // First: try current position
+        if (isValidPlacement(shape, currentX, currentY, this.game.targetGrid, otherPieces)) {
+            this.game.updatePieceState(piece.id, { x: currentX, y: currentY });
+            return;
+        }
+
+        // Second: search for nearest valid position on board
+        const boardPos = this.findNearestBoardPosition(piece, shape, currentX, currentY);
+        if (boardPos) {
+            this.game.updatePieceState(piece.id, { x: boardPos.x, y: boardPos.y });
+            return;
+        }
+
+        // Fallback: return to dock
+        const dockPos = this.findNearestDockPosition(piece, currentX, currentY);
+        this.game.updatePieceState(piece.id, { x: dockPos.x, y: dockPos.y });
+    }
+
+    findNearestBoardPosition(piece, shape, fromX, fromY) {
+        const boardRows = this.game.targetGrid?.length || 5;
+        const boardCols = this.game.targetGrid?.[0]?.length || 5;
+        const otherPieces = this.game.pieces.filter(p => p !== piece);
+
+        const candidates = [];
+        for (let y = 0; y < boardRows; y++) {
+            for (let x = 0; x < boardCols; x++) {
+                if (isValidPlacement(shape, x, y, this.game.targetGrid, otherPieces)) {
+                    const dist = Math.hypot(x - fromX, y - fromY);
+                    candidates.push({ x, y, dist });
+                }
+            }
+        }
+
+        if (candidates.length === 0) return null;
+
+        candidates.sort((a, b) => a.dist - b.dist);
+        return candidates[0];
+    }
+
     cancelDrag() {
         // Return piece to original dock position if needed
         if (this.draggingPiece) {
@@ -426,6 +492,9 @@ export class InputHandler {
         this.isDragging = false;
         this.activeTouchId = null;
         this.renderer.draggingPieceId = null;
+        this.renderer.dragStartGridPos = null;
         this.hasInteraction = false;
+        this.dragStartGridPos = null;
+        this.dragStartScreenPos = null;
     }
 }

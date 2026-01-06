@@ -38,6 +38,7 @@ export class Renderer {
 
         // Currently dragging
         this.draggingPieceId = null;
+        this.dragStartGridPos = null;
 
         // Resize handling
         window.addEventListener('resize', () => this.resize());
@@ -191,6 +192,20 @@ export class Renderer {
             const inDock = piece.y >= dockY;
             const onBoard = !inDock && !isDragging;
 
+            // Check if we're about to START dragging from dock
+            // IMPORTANT: Capture DOM position BEFORE applying .dragging class,
+            // because .dragging CSS changes left/top which affects getBoundingClientRect()
+            const isInBoard = el.parentElement === this.boardEl;
+            const justStartingDockDrag = isDragging &&
+                                         !isInBoard &&
+                                         el.style.position !== 'fixed';
+
+            let dockDragOrigin = null;
+            if (justStartingDockDrag) {
+                // Capture current DOM position while still position:relative in dock
+                dockDragOrigin = el.getBoundingClientRect();
+            }
+
             // Update classes
             el.classList.toggle('in-dock', inDock && !isDragging);
             el.classList.toggle('on-board', onBoard);
@@ -209,12 +224,28 @@ export class Renderer {
                     this.boardEl.appendChild(el);
                 }
             } else if (isDragging) {
-                // Dragging: use fixed position relative to viewport
+                // Dragging: use fixed position
                 // IMPORTANT: Do NOT reparent the element - moving it in the DOM during
                 // a touch gesture breaks touch event tracking.
-                const rect = this.getBoardRect();
-                el.style.setProperty('--board-left', `${rect.left}px`);
-                el.style.setProperty('--board-top', `${rect.top}px`);
+                if (isInBoard) {
+                    // CSS quirk: #game-board has a filter property, which creates a new
+                    // containing block for position:fixed children. So position:fixed
+                    // is relative to board, not viewport - no offset needed.
+                    el.style.setProperty('--board-left', '0px');
+                    el.style.setProperty('--board-top', '0px');
+                } else if (dockDragOrigin) {
+                    // Starting drag from dock: use captured DOM position to calculate offset
+                    // The CSS calc is: left = board-left + piece-x * cellSize
+                    // We want: left = originalDOMLeft when piece-x equals original value
+                    // Use dragStartGridPos (the original position before drag started)
+                    const origX = this.dragStartGridPos?.x ?? piece.x;
+                    const origY = this.dragStartGridPos?.y ?? piece.y;
+                    const baseLeft = dockDragOrigin.left - origX * this.cellSize;
+                    const baseTop = dockDragOrigin.top - origY * this.cellSize;
+                    el.style.setProperty('--board-left', `${baseLeft}px`);
+                    el.style.setProperty('--board-top', `${baseTop}px`);
+                }
+                // If already dragging from dock, keep the stored offset
                 el.style.position = 'fixed';
                 el.style.zIndex = '1000';
             } else {
