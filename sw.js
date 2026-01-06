@@ -1,4 +1,4 @@
-// Version: 05060af • 2026-01-06 11:01
+// Version: 616b1a9 • 2026-01-06 12:37
 // PolyFit Service Worker
 // Cache name will be set dynamically based on version
 let CACHE_NAME = 'polyfit-v1'; // fallback
@@ -13,6 +13,15 @@ const ASSETS_TO_CACHE = [
   './js/renderer.js',
   './js/input.js',
   './js/shapes.js',
+  './js/worker.js',
+  './js/solver.js',
+  './js/validation.js',
+  './js/sounds.js',
+  './js/haptics.js',
+  './js/utils.js',
+  './js/config/difficulty.js',
+  './js/config/constants.js',
+  './js/effects/Confetti.js',
   './icons/icon-144.png',
   './icons/icon-192.png',
   './icons/icon-256.png',

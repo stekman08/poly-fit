@@ -220,6 +220,9 @@ export class InputHandler {
 
             // Show ghost preview at snap position
             this.updateGhostPreview(gridPos.x, gridPos.y);
+
+            // Request render for visual update during drag
+            if (window.requestRender) window.requestRender();
             this.onInteraction();
         }
     }
