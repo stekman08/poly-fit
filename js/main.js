@@ -77,7 +77,6 @@ if (urlLevel && urlLevel > 0) {
 let lastInteractionTime = Date.now();
 let hintShown = false;
 let isWinning = false;
-let practiceMode = false; // When true, return to start screen after win
 let currentThemeIndex = 0;
 let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
 const MAX_GENERATION_RETRIES = 10; // Higher for complex puzzles at level 200+
@@ -323,34 +322,27 @@ function onInteraction(checkWin = false) {
         haptics.vibrateWin();
         renderer.triggerWinEffect();
 
-        // INSTANT FLOW: Short play delay then immediate next level
+        // INSTANT FLOW: Short delay then advance to next level
         setTimeout(() => {
-            if (practiceMode) {
-                // Practice mode: return to start screen
-                practiceMode = false;
-                showStartScreen();
-            } else {
-                // Normal mode: advance to next level
-                level++;
-                if (level > maxLevel) {
-                    maxLevel = level;
-                    safeSetItem('polyfit-max-level', maxLevel);
+            level++;
+            if (level > maxLevel) {
+                maxLevel = level;
+                safeSetItem('polyfit-max-level', String(maxLevel));
 
-                    // Track new max level in analytics
-                    try {
-                        if (window.goatcounter && window.goatcounter.count) {
-                            window.goatcounter.count({
-                                path: '/polyfit/event/maxlevel/' + maxLevel,
-                                title: 'PolyFit Max Level: ' + maxLevel,
-                                event: true
-                            });
-                        }
-                    } catch (e) {
-                        // Analytics error should not break the game
+                // Track new max level in analytics
+                try {
+                    if (window.goatcounter && window.goatcounter.count) {
+                        window.goatcounter.count({
+                            path: '/polyfit/event/maxlevel/' + maxLevel,
+                            title: 'PolyFit Max Level: ' + maxLevel,
+                            event: true
+                        });
                     }
+                } catch (e) {
+                    // Analytics error should not break the game
                 }
-                startLevel();
             }
+            startLevel();
         }, WIN_TRANSITION_DELAY);
     }
 }
@@ -521,9 +513,8 @@ function buildLevelGrid() {
 
 function selectLevel(selectedLevel) {
     level = selectedLevel;
-    practiceMode = true;
     levelSelectScreen.classList.add('hidden');
-    // Skip tutorial in practice mode
+    // Skip tutorial when selecting from level menu
     startLevel();
 }
 

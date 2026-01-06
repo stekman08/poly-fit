@@ -57,7 +57,7 @@ test.describe('Level Select', () => {
         await expect(startScreen).not.toHaveClass(/hidden/);
     });
 
-    test('selecting level starts that level in practice mode', async ({ page }) => {
+    test('selecting level starts that level', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('polyfit-max-level', '10');
