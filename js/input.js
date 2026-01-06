@@ -53,7 +53,7 @@ export class InputHandler {
         // Touch events
         this.container.addEventListener('touchstart', (e) => {
             this.lastTouchTime = Date.now();
-            const isUIElement = e.target.closest('#ui-layer, #start-screen, #tutorial-overlay, #win-overlay, #level-select-screen, #loading-overlay');
+            const isUIElement = e.target.closest('#ui-layer, #start-screen, #tutorial-overlay, #level-select-screen, #loading-overlay');
             if (isUIElement && !e.target.closest('.piece')) {
                 return;
             }

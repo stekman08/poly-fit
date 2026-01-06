@@ -13,7 +13,6 @@ import {
     WIN_TRANSITION_DELAY
 } from './config/constants.js';
 
-const winOverlay = document.getElementById('win-overlay');
 const levelDisplay = document.getElementById('level-display');
 const startScreen = document.getElementById('start-screen');
 const btnNewGame = document.getElementById('btn-new-game');
@@ -322,7 +321,6 @@ function startLevelWithData(puzzleData) {
     lastInteractionTime = Date.now();
     hintShown = false;
     isWinning = false;
-    winOverlay.classList.add('hidden');
     levelDisplay.innerText = `LEVEL ${level}`;
 }
 
@@ -497,7 +495,6 @@ function showStartScreen() {
         btnLevelSelect.classList.add('hidden');
     }
     startScreen.classList.remove('hidden');
-    winOverlay.classList.add('hidden');
 }
 
 function showLevelSelect() {

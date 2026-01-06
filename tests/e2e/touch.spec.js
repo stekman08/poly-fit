@@ -37,10 +37,6 @@ test.describe('Touch interactions', () => {
         // Level should still be 1
         const levelAfter = await page.locator('#level-display').textContent();
         expect(levelAfter).toContain('LEVEL 1');
-
-        // Win overlay should be hidden
-        const winOverlay = page.locator('#win-overlay');
-        await expect(winOverlay).toHaveClass(/hidden/);
     });
 
     test('dragging piece should not trigger level change', async ({ page }) => {

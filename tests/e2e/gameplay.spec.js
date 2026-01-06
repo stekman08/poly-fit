@@ -13,7 +13,7 @@ async function startGame(page) {
 }
 
 test.describe('Gameplay - Win condition', () => {
-    test('solving puzzle shows win overlay', async ({ page }) => {
+    test('solving puzzle triggers win condition', async ({ page }) => {
         await startGame(page);
 
         // Get solution from game state (using effective values for randomized start)

@@ -324,7 +324,7 @@ test.describe('Level Progression - Edge Cases', () => {
         expect(finalLevel).toBe(initialLevel + 1);
     });
 
-    test('instant flow passes without showing win overlay', async ({ page }) => {
+    test('instant flow advances level without blocking', async ({ page }) => {
         await startGame(page);
         const initialLevel = await getLevel(page);
 
@@ -335,14 +335,8 @@ test.describe('Level Progression - Edge Cases', () => {
         // Wait for potential transition/animation time
         await page.waitForTimeout(1000);
 
-        // Verify level advanced
+        // Verify level advanced (no blocking overlay stopped it)
         const finalLevel = await getLevel(page);
         expect(finalLevel).toBe(initialLevel + 1);
-
-        // Verify overlay NEVER appeared (still hidden)
-        const isHidden = await page.evaluate(() =>
-            document.querySelector('#win-overlay').classList.contains('hidden')
-        );
-        expect(isHidden).toBe(true);
     });
 });
