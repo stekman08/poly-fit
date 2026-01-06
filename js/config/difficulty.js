@@ -139,6 +139,10 @@ const IRREGULAR_SHAPES = {
 // Export for use in puzzle.js
 export { IRREGULAR_SHAPES };
 
+// Reference level for normalizing logarithmic probability curves
+// This represents the level at which mechanics reach ~100% of their max probability
+const LOG_PROB_REFERENCE_LEVEL = 200;
+
 // Piece categories by difficulty
 export const PIECE_CATEGORIES = {
     // Easy: symmetric or simple shapes
@@ -160,7 +164,7 @@ export const PIECE_CATEGORIES = {
 function logProb(level, introLevel, maxProb, scale = 50) {
     if (level < introLevel) return 0;
     const x = level - introLevel;
-    return maxProb * Math.log(1 + x / scale) / Math.log(1 + 200 / scale);
+    return maxProb * Math.log(1 + x / scale) / Math.log(1 + LOG_PROB_REFERENCE_LEVEL / scale);
 }
 
 /**

@@ -35,11 +35,8 @@ class Particle {
         ctx.rotate(this.rotation);
         ctx.globalAlpha = this.life;
 
-        // Glow effect
         ctx.shadowBlur = 10;
         ctx.shadowColor = this.color;
-
-        // Draw rectangle confetti
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
 
@@ -60,7 +57,6 @@ export class ConfettiSystem {
     burst(x, y, count = 50) {
         this.isActive = true;
         for (let i = 0; i < count; i++) {
-            // Spread particles around the burst point
             const offsetX = (Math.random() - 0.5) * 100;
             const offsetY = (Math.random() - 0.5) * 50;
             this.particles.push(new Particle(x + offsetX, y + offsetY));
@@ -93,7 +89,7 @@ export class ConfettiSystem {
     }
 
     clear() {
-        this.particles = [];
+        this.particles.length = 0;
         this.isActive = false;
     }
 }

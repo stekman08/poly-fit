@@ -11,29 +11,22 @@ class HapticManager {
 
     vibrate(pattern) {
         if (!this.enabled || !this.supported) return;
-        try {
-            navigator.vibrate(pattern);
-        } catch {
-            // Silently fail if vibration not allowed
-        }
+        // navigator.vibrate() returns false on failure, doesn't throw
+        navigator.vibrate(pattern);
     }
 
-    // Quick pulse for rotate
     vibrateRotate() {
         this.vibrate(12);
     }
 
-    // Double pulse for flip
     vibrateFlip() {
         this.vibrate([8, 30, 8]);
     }
 
-    // Satisfying thunk for snap
     vibrateSnap() {
         this.vibrate(20);
     }
 
-    // Victory pattern
     vibrateWin() {
         this.vibrate([30, 50, 30, 50, 80]);
     }

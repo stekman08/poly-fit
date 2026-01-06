@@ -27,18 +27,13 @@ export class InputHandler {
         this.container = document.getElementById('game-container');
         this.onInteraction = onInteraction;
 
-        // Drag state
         this.draggingPiece = null;
-        this.isDragging = false; // True only after movement threshold exceeded
+        this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartTime = 0;
         this.activeTouchId = null;
         this.hasInteraction = false;
-
-        // Prevent mouse events from firing after touch events (browser compatibility behavior)
         this.lastTouchTime = 0;
-
-        // Drag start position tracking (for delta-based movement)
         this.dragStartGridPos = null;
         this.dragStartScreenPos = null;
 
@@ -144,63 +139,69 @@ export class InputHandler {
         if (this.hasInteraction) return;
         this.hasInteraction = true;
 
-        // Find piece under touch point
-        let el = document.elementFromPoint(clientX, clientY);
-        let pieceEl = el ? el.closest('.piece') : null;
+        try {
+            // Find piece under touch point
+            let el = document.elementFromPoint(clientX, clientY);
+            let pieceEl = el ? el.closest('.piece') : null;
 
-        // Sticky Touch: If no piece found directly, look for closest one nearby
-        if (!pieceEl) {
-            pieceEl = this.findClosestPieceElement(clientX, clientY);
-        }
+            // Sticky Touch: If no piece found directly, look for closest one nearby
+            if (!pieceEl) {
+                pieceEl = this.findClosestPieceElement(clientX, clientY);
+            }
 
-        if (!pieceEl || !pieceEl.dataset.pieceId) {
+            if (!pieceEl || !pieceEl.dataset.pieceId) {
+                this.hasInteraction = false;
+                return;
+            }
+
+            const piece = this.game.pieces.find(p => String(p.id) === pieceEl.dataset.pieceId);
+            if (!piece) {
+                this.hasInteraction = false;
+                return;
+            }
+
+            // Store drag state
+            this.draggingPiece = piece;
+            this.isDragging = false; // Not dragging yet, could be a tap
+            this.dragStartPos = { x: clientX, y: clientY };
+            this.dragStartTime = Date.now();
+            this.activeTouchId = isTouch ? touchId : null;
+
+            // Calculate the piece's ACTUAL grid position from its DOM position
+            // This is crucial because dock pieces use flexbox positioning (piece.x/y are virtual),
+            // while board pieces use absolute positioning (piece.x/y match grid coords).
+            // By calculating from DOM, we get consistent behavior for both.
+            const pieceRect = pieceEl.getBoundingClientRect();
+            const boardRect = this.renderer.getBoardRect();
+            const cellSize = this.renderer.cellSize;
+
+            // Convert piece's top-left corner from screen pixels to board grid coordinates
+            const actualGridX = (pieceRect.left - boardRect.left) / cellSize;
+            const actualGridY = (pieceRect.top - boardRect.top) / cellSize;
+
+            this.dragStartGridPos = { x: actualGridX, y: actualGridY };
+            this.dragStartScreenPos = { x: clientX, y: clientY };
+
+            // Move piece to front (end of array)
+            const idx = this.game.pieces.indexOf(piece);
+            if (idx > -1) {
+                this.game.pieces.splice(idx, 1);
+                this.game.pieces.push(piece);
+            }
+
+            // Trigger "Flash on Grab" effect
+            pieceEl.classList.add('grab-flash');
+            setTimeout(() => {
+                pieceEl.classList.remove('grab-flash');
+            }, 200);
+
+            // DON'T move the piece yet - wait for actual drag detection
+            this.onInteraction();
+        } catch (e) {
+            // Ensure interaction state is reset on unexpected errors
             this.hasInteraction = false;
-            return;
+            throw e;
         }
-
-        const piece = this.game.pieces.find(p => String(p.id) === pieceEl.dataset.pieceId);
-        if (!piece) {
-            this.hasInteraction = false;
-            return;
-        }
-
-        // Store drag state
-        this.draggingPiece = piece;
-        this.isDragging = false; // Not dragging yet, could be a tap
-        this.dragStartPos = { x: clientX, y: clientY };
-        this.dragStartTime = Date.now();
-        this.activeTouchId = isTouch ? touchId : null;
-
-        // Calculate the piece's ACTUAL grid position from its DOM position
-        // This is crucial because dock pieces use flexbox positioning (piece.x/y are virtual),
-        // while board pieces use absolute positioning (piece.x/y match grid coords).
-        // By calculating from DOM, we get consistent behavior for both.
-        const pieceRect = pieceEl.getBoundingClientRect();
-        const boardRect = this.renderer.getBoardRect();
-        const cellSize = this.renderer.cellSize;
-
-        // Convert piece's top-left corner from screen pixels to board grid coordinates
-        const actualGridX = (pieceRect.left - boardRect.left) / cellSize;
-        const actualGridY = (pieceRect.top - boardRect.top) / cellSize;
-
-        this.dragStartGridPos = { x: actualGridX, y: actualGridY };
-        this.dragStartScreenPos = { x: clientX, y: clientY };
-
-        // Move piece to front (end of array)
-        const idx = this.game.pieces.indexOf(piece);
-        if (idx > -1) {
-            this.game.pieces.splice(idx, 1);
-            this.game.pieces.push(piece);
-        }
-
-        // Trigger "Flash on Grab" effect
-        pieceEl.classList.add('grab-flash');
-        setTimeout(() => {
-            pieceEl.classList.remove('grab-flash');
-        }, 200);
-
-        // DON'T move the piece yet - wait for actual drag detection
-        this.onInteraction();
     }
 
     handleMove(clientX, clientY) {
