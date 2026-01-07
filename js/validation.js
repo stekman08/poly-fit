@@ -1,3 +1,31 @@
+// Module-level cache for occupancy during drag operations
+let occupancyCache = null;
+
+/**
+ * Build occupancy cache for drag session.
+ * Call once at drag start to avoid repeated Set construction.
+ */
+export function buildOccupancyCache(pieces, grid) {
+    const rows = grid.length;
+    occupancyCache = new Set();
+    for (const piece of pieces) {
+        for (const block of piece.currentShape) {
+            const px = piece.x + block.x;
+            const py = piece.y + block.y;
+            if (py >= 0 && py < rows) {
+                occupancyCache.add(`${px},${py}`);
+            }
+        }
+    }
+}
+
+/**
+ * Clear occupancy cache when drag ends.
+ */
+export function clearOccupancyCache() {
+    occupancyCache = null;
+}
+
 export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
     if (!grid || grid.length === 0 || !grid[0]) return false;
     if (!shape || shape.length === 0) return false; // Reject empty shapes
@@ -8,16 +36,20 @@ export function isValidPlacement(shape, x, y, grid, otherPieces = []) {
     let hasBlockOnBoard = false;
     let hasBlockOutsideBoard = false;
 
-    // Only build occupancy Set if there are other pieces (optimization)
+    // Use cached occupancy if available, otherwise build fresh
     let occupiedCells = null;
     if (otherPieces.length > 0) {
-        occupiedCells = new Set();
-        for (const piece of otherPieces) {
-            for (const block of piece.currentShape) {
-                const px = piece.x + block.x;
-                const py = piece.y + block.y;
-                if (py >= 0 && py < rows) {
-                    occupiedCells.add(`${px},${py}`);
+        if (occupancyCache) {
+            occupiedCells = occupancyCache;
+        } else {
+            occupiedCells = new Set();
+            for (const piece of otherPieces) {
+                for (const block of piece.currentShape) {
+                    const px = piece.x + block.x;
+                    const py = piece.y + block.y;
+                    if (py >= 0 && py < rows) {
+                        occupiedCells.add(`${px},${py}`);
+                    }
                 }
             }
         }

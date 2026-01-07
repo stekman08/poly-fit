@@ -1,6 +1,7 @@
 import { bench, describe } from 'vitest';
 import { generatePuzzle, canPlacePiece, placePiece, createGrid } from '../../js/puzzle.js';
 import { SHAPES, rotateShape, flipShape, normalizeShape } from '../../js/shapes.js';
+import { isValidPlacement, buildOccupancyCache, clearOccupancyCache } from '../../js/validation.js';
 
 describe('Puzzle Generation Performance', () => {
     bench('generatePuzzle (3 pieces)', () => {
@@ -124,5 +125,53 @@ describe('Algorithm Complexity', () => {
                 }
             }
         }
+    });
+});
+
+describe('Drag Performance - Level 360 Simulation', () => {
+    // Simulate level 360: 7x6 board, 6 pieces already placed (dragging 7th piece)
+    const grid = Array.from({ length: 6 }, () => Array(7).fill(1));
+    const otherPieces = Array.from({ length: 6 }, (_, i) => ({
+        x: i % 3,
+        y: Math.floor(i / 3),
+        currentShape: [
+            { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 },
+            { x: 0, y: 1 }, { x: 1, y: 1 }
+        ] // 5-block pentomino
+    }));
+    const draggedShape = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }]; // L-tromino
+
+    bench('snap search WITHOUT cache (42 positions × 6 pieces)', () => {
+        // Simulates findNearestBoardPosition() - tests all 42 grid positions
+        for (let y = 0; y < 6; y++) {
+            for (let x = 0; x < 7; x++) {
+                isValidPlacement(draggedShape, x, y, grid, otherPieces);
+            }
+        }
+    });
+
+    bench('snap search WITH cache (42 positions, cached occupancy)', () => {
+        buildOccupancyCache(otherPieces, grid);
+        for (let y = 0; y < 6; y++) {
+            for (let x = 0; x < 7; x++) {
+                isValidPlacement(draggedShape, x, y, grid, otherPieces);
+            }
+        }
+        clearOccupancyCache();
+    });
+
+    bench('ghost preview WITHOUT cache (60 calls = 1 sec @ 60fps)', () => {
+        // Simulates updateGhostPreview() called on every touchmove
+        for (let frame = 0; frame < 60; frame++) {
+            isValidPlacement(draggedShape, 3, 2, grid, otherPieces);
+        }
+    });
+
+    bench('ghost preview WITH cache (60 calls, cached occupancy)', () => {
+        buildOccupancyCache(otherPieces, grid);
+        for (let frame = 0; frame < 60; frame++) {
+            isValidPlacement(draggedShape, 3, 2, grid, otherPieces);
+        }
+        clearOccupancyCache();
     });
 });

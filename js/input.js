@@ -1,6 +1,6 @@
 import { sounds } from './sounds.js';
 import { haptics } from './haptics.js';
-import { isValidPlacement } from './validation.js';
+import { isValidPlacement, buildOccupancyCache, clearOccupancyCache } from './validation.js';
 import { getShapeDimensions } from './shapes.js';
 import {
     TAP_MAX_DISTANCE,
@@ -36,6 +36,7 @@ export class InputHandler {
         this.lastTouchTime = 0;
         this.dragStartGridPos = null;
         this.dragStartScreenPos = null;
+        this.cachedOtherPieces = null; // Performance: cache other pieces during drag
 
         this.bindEvents();
     }
@@ -189,6 +190,11 @@ export class InputHandler {
                 this.game.pieces.push(piece);
             }
 
+            // Build occupancy cache for this drag session (performance optimization)
+            // Cache both the array and the Set to avoid filter() on every touchmove
+            this.cachedOtherPieces = this.game.pieces.filter(p => p !== piece);
+            buildOccupancyCache(this.cachedOtherPieces, this.game.targetGrid);
+
             // Trigger "Flash on Grab" effect
             pieceEl.classList.add('grab-flash');
             setTimeout(() => {
@@ -257,7 +263,8 @@ export class InputHandler {
         snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
         snapY = Math.max(0, snapY);
 
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        // Use cached array to avoid filter() on every touchmove (60x/sec)
+        const otherPieces = this.cachedOtherPieces || this.game.pieces.filter(p => p !== piece);
         const isValid = isValidPlacement(shape, snapX, snapY, this.game.targetGrid, otherPieces);
 
         // Show ghost only for valid board placements
@@ -364,7 +371,8 @@ export class InputHandler {
         snapX = Math.max(0, Math.min(snapX, boardCols - pieceW));
         snapY = Math.max(0, snapY);
 
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        // Use cached array when available
+        const otherPieces = this.cachedOtherPieces || this.game.pieces.filter(p => p !== piece);
         const isValid = isValidPlacement(shape, snapX, snapY, this.game.targetGrid, otherPieces);
 
         if (isValid && snapY < boardRows) {
@@ -433,7 +441,8 @@ export class InputHandler {
         const shape = piece.currentShape;
         const boardRows = this.game.targetGrid?.length || 5;
         const boardCols = this.game.targetGrid?.[0]?.length || 5;
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        // Use cached array when available
+        const otherPieces = this.cachedOtherPieces || this.game.pieces.filter(p => p !== piece);
 
         const currentX = Math.round(piece.x);
         const currentY = Math.round(piece.y);
@@ -459,7 +468,8 @@ export class InputHandler {
     findNearestBoardPosition(piece, shape, fromX, fromY) {
         const boardRows = this.game.targetGrid?.length || 5;
         const boardCols = this.game.targetGrid?.[0]?.length || 5;
-        const otherPieces = this.game.pieces.filter(p => p !== piece);
+        // Use cached array when available
+        const otherPieces = this.cachedOtherPieces || this.game.pieces.filter(p => p !== piece);
 
         const candidates = [];
         for (let y = 0; y < boardRows; y++) {
@@ -497,5 +507,7 @@ export class InputHandler {
         this.hasInteraction = false;
         this.dragStartGridPos = null;
         this.dragStartScreenPos = null;
+        this.cachedOtherPieces = null;
+        clearOccupancyCache();
     }
 }
