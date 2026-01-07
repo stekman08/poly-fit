@@ -3,85 +3,6 @@ import { ConfettiSystem } from './effects/Confetti.js';
 import { getDockY } from './config/constants.js';
 
 /**
- * Find all cells that should be displayed as visual holes.
- * A visual hole is a connected region of empty cells (value=0) that is
- * completely surrounded by target cells (value=1).
- * Board edges do NOT count as walls - only targets count.
- */
-function findVisualHoles(grid) {
-    const rows = grid.length;
-    const cols = grid[0].length;
-    const visited = new Set();
-    const visualHoles = new Set();
-
-    const key = (r, c) => `${r},${c}`;
-
-    // Flood-fill to find connected region of empty cells
-    function getRegion(startR, startC) {
-        const region = [];
-        const stack = [[startR, startC]];
-
-        while (stack.length > 0) {
-            const [r, c] = stack.pop();
-            const k = key(r, c);
-
-            if (visited.has(k)) continue;
-            if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
-            if (grid[r][c] !== 0) continue;
-
-            visited.add(k);
-            region.push([r, c]);
-
-            stack.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
-        }
-
-        return region;
-    }
-
-    // Check if a region is completely surrounded by targets
-    function isRegionSurrounded(region) {
-        const regionSet = new Set(region.map(([r, c]) => key(r, c)));
-
-        for (const [r, c] of region) {
-            const neighbors = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]];
-
-            for (const [nr, nc] of neighbors) {
-                const nk = key(nr, nc);
-                if (regionSet.has(nk)) continue; // Same region, skip
-
-                // Check if neighbor is outside grid (board edge = not surrounded)
-                if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) {
-                    return false;
-                }
-
-                // Neighbor must be a target (value=1) to be "surrounded"
-                if (grid[nr][nc] !== 1) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    // Find all regions and check if they're surrounded
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            if (grid[r][c] === 0 && !visited.has(key(r, c))) {
-                const region = getRegion(r, c);
-                if (region.length > 0 && isRegionSurrounded(region)) {
-                    for (const [rr, rc] of region) {
-                        visualHoles.add(key(rr, rc));
-                    }
-                }
-            }
-        }
-    }
-
-    return visualHoles;
-}
-
-/**
  * DOM-based Renderer - replaces Canvas rendering with CSS Grid
  * Benefits: automatic responsiveness, native touch handling, easier styling
  */
@@ -209,7 +130,6 @@ export class Renderer {
 
         // Update cell states (only runs once per level)
         const cells = this.boardEl.querySelectorAll('.board-cell');
-        const visualHoles = findVisualHoles(grid);
 
         let i = 0;
         for (let r = 0; r < rows; r++) {
@@ -219,10 +139,10 @@ export class Renderer {
 
                 cell.classList.toggle('target', value === 1);
 
-                const isVisualHole = visualHoles.has(`${r},${c}`);
-
-                cell.classList.toggle('hole', value === -1 || isVisualHole);
-                cell.classList.toggle('outside', value === -2 || (value === 0 && !isVisualHole));
+                // value === -1: blocking hole, value === 0: empty inside puzzle → both dark
+                // value === -2: outside puzzle shape → transparent
+                cell.classList.toggle('hole', value === -1 || value === 0);
+                cell.classList.toggle('outside', value === -2);
             }
         }
     }
