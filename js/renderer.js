@@ -130,6 +130,7 @@ export class Renderer {
 
         // Update cell states (only runs once per level)
         const cells = this.boardEl.querySelectorAll('.board-cell');
+
         let i = 0;
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -138,19 +139,10 @@ export class Renderer {
 
                 cell.classList.toggle('target', value === 1);
 
-                // Check if this empty cell looks like a hole (surrounded by targets)
-                let isVisualHole = false;
-                if (value === 0) {
-                    const hasTop = r > 0 && grid[r - 1][c] === 1;
-                    const hasBottom = r < rows - 1 && grid[r + 1][c] === 1;
-                    const hasLeft = c > 0 && grid[r][c - 1] === 1;
-                    const hasRight = c < cols - 1 && grid[r][c + 1] === 1;
-                    // It's a visual hole only if completely surrounded (all 4 sides)
-                    isVisualHole = hasTop && hasBottom && hasLeft && hasRight;
-                }
-
-                cell.classList.toggle('hole', value === -1 || isVisualHole);
-                cell.classList.toggle('outside', value === -2 || (value === 0 && !isVisualHole));
+                // value === -1: blocking hole, value === 0: empty inside puzzle → both dark
+                // value === -2: outside puzzle shape → transparent
+                cell.classList.toggle('hole', value === -1 || value === 0);
+                cell.classList.toggle('outside', value === -2);
             }
         }
     }
@@ -168,11 +160,19 @@ export class Renderer {
                 this.pieceElements.set(piece.id, el);
             }
 
-            // Update piece shape and color
-            this.updatePieceShape(el, piece);
-
-            // Determine state
+            // Determine state early for caching
             const isDragging = piece.id === this.draggingPieceId;
+
+            // Fast path: skip ALL DOM operations if piece state unchanged
+            // During drag, only the dragged piece's x/y changes - other pieces can skip entirely
+            const stateKey = `${piece.x}:${piece.y}:${piece.rotation}:${piece.flipped}:${isDragging}`;
+            if (el.dataset.stateKey === stateKey) {
+                return; // Nothing changed, skip all DOM operations
+            }
+            el.dataset.stateKey = stateKey;
+
+            // Update piece shape and color (has its own cache)
+            this.updatePieceShape(el, piece);
 
             const inDock = piece.y >= dockY;
             const onBoard = !inDock && !isDragging;
@@ -263,13 +263,18 @@ export class Renderer {
     }
 
     updatePieceShape(el, piece) {
+        // Fast cache check FIRST - rotation+flipped uniquely determine currentShape
+        // This avoids expensive map/sort/join and style writes on every frame
+        const color = piece.color || COLORS[0];
+        const cacheKey = `${piece.id}:${piece.rotation}:${piece.flipped}:${color}`;
+        if (el.dataset.cacheKey === cacheKey) {
+            return; // Nothing changed, skip ALL expensive operations
+        }
+        el.dataset.cacheKey = cacheKey;
+
+        // Only calculate dimensions and update styles when shape actually changed
         const shape = piece.currentShape;
         const dims = getShapeDimensions(shape);
-        const color = piece.color || COLORS[0];
-
-        // Create a signature for the current shape to detect changes
-        // This prevents unnecessary DOM rebuilds which break touch tracking
-        const shapeSignature = `${dims.width}x${dims.height}:${shape.map(b => `${b.x},${b.y}`).sort().join(';')}:${color}`;
 
         // Update grid template - no gap to match board cells exactly
         el.style.display = 'grid';
@@ -278,13 +283,6 @@ export class Renderer {
         el.style.width = `calc(var(--cell-size) * ${dims.width})`;
         el.style.height = `calc(var(--cell-size) * ${dims.height})`;
         el.style.color = color;
-
-        // Only rebuild DOM if shape has actually changed
-        // Rebuilding during touchstart breaks Chrome/CDP touch tracking
-        if (el.dataset.shapeSignature === shapeSignature) {
-            return; // Shape unchanged, skip DOM rebuild
-        }
-        el.dataset.shapeSignature = shapeSignature;
 
         // Clear and rebuild blocks
         el.innerHTML = '';
