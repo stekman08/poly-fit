@@ -240,11 +240,19 @@ export class Renderer {
                 this.pieceElements.set(piece.id, el);
             }
 
-            // Update piece shape and color
-            this.updatePieceShape(el, piece);
-
-            // Determine state
+            // Determine state early for caching
             const isDragging = piece.id === this.draggingPieceId;
+
+            // Fast path: skip ALL DOM operations if piece state unchanged
+            // During drag, only the dragged piece's x/y changes - other pieces can skip entirely
+            const stateKey = `${piece.x}:${piece.y}:${piece.rotation}:${piece.flipped}:${isDragging}`;
+            if (el.dataset.stateKey === stateKey) {
+                return; // Nothing changed, skip all DOM operations
+            }
+            el.dataset.stateKey = stateKey;
+
+            // Update piece shape and color (has its own cache)
+            this.updatePieceShape(el, piece);
 
             const inDock = piece.y >= dockY;
             const onBoard = !inDock && !isDragging;
