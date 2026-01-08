@@ -165,7 +165,9 @@ export class Renderer {
 
             // Fast path: skip ALL DOM operations if piece state unchanged
             // During drag, only the dragged piece's x/y changes - other pieces can skip entirely
-            const stateKey = `${piece.x}:${piece.y}:${piece.rotation}:${piece.flipped}:${isDragging}`;
+            // Include shape signature to detect shape changes between levels (pieces reuse IDs)
+            const shapeKey = piece.currentShape.map(b => `${b.x},${b.y}`).sort().join(';');
+            const stateKey = `${piece.x}:${piece.y}:${piece.rotation}:${piece.flipped}:${isDragging}:${shapeKey}`;
             if (el.dataset.stateKey === stateKey) {
                 return; // Nothing changed, skip all DOM operations
             }
@@ -263,10 +265,11 @@ export class Renderer {
     }
 
     updatePieceShape(el, piece) {
-        // Fast cache check FIRST - rotation+flipped uniquely determine currentShape
-        // This avoids expensive map/sort/join and style writes on every frame
+        // Fast cache check FIRST - include shape signature to detect changes between levels
+        // (pieces reuse IDs, and different pieces can have same rotation/flipped/color)
         const color = piece.color || COLORS[0];
-        const cacheKey = `${piece.id}:${piece.rotation}:${piece.flipped}:${color}`;
+        const shapeKey = piece.currentShape.map(b => `${b.x},${b.y}`).sort().join(';');
+        const cacheKey = `${piece.id}:${piece.rotation}:${piece.flipped}:${color}:${shapeKey}`;
         if (el.dataset.cacheKey === cacheKey) {
             return; // Nothing changed, skip ALL expensive operations
         }
