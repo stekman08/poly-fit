@@ -10,7 +10,7 @@
     "prestart": "npm run version",
     "start": "serve -l 3001",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --exclude 'tests/unit/perf-*.test.js' && vitest run tests/unit/perf-*.test.js --pool=forks --no-file-parallelism",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
