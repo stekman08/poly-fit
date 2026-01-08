@@ -1,4 +1,4 @@
-import { rotateShape, flipShape, normalizeShape } from './shapes.js';
+import { applyTransforms } from './shapes.js';
 import { createGrid } from './utils.js';
 
 /**
@@ -25,11 +25,7 @@ function getUniqueOrientations(baseShape) {
 
     for (let f = 0; f < 2; f++) {
         for (let r = 0; r < 4; r++) {
-            let s = baseShape;
-            if (f) s = flipShape(s);
-            for (let i = 0; i < r; i++) s = rotateShape(s);
-            s = normalizeShape(s);
-
+            const s = applyTransforms(baseShape, r, f === 1);
             const sig = JSON.stringify(s);
             if (!seen.has(sig)) {
                 seen.add(sig);

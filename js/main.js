@@ -9,7 +9,8 @@ import {
     getDockY,
     getMaxDockY,
     HINT_DELAY,
-    WIN_TRANSITION_DELAY
+    WIN_TRANSITION_DELAY,
+    MAX_WORKER_RETRIES
 } from './config/constants.js';
 
 const levelDisplay = document.getElementById('level-display');
@@ -77,7 +78,6 @@ let hintShown = false;
 let isWinning = false;
 let currentThemeIndex = 0;
 let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
-const MAX_GENERATION_RETRIES = 10; // Higher for complex puzzles at level 200+
 
 // Dirty flag for render optimization - only redraw when something changed
 let needsRender = true;
@@ -133,10 +133,11 @@ function loop() {
 }
 
 const generationWorker = new Worker('js/worker.js', { type: 'module' });
-window.__generationWorker = generationWorker; // Expose for E2E testing
+window.__generationWorker = generationWorker;
 let preGeneratedPuzzle = null;
 let isGenerating = false;
-let pendingLevelStart = null; // Callback when generation finishes
+let pendingLevelStart = null;
+let pendingConfig = null;
 
 // Handle worker messages
 generationWorker.onmessage = function (e) {
@@ -162,7 +163,7 @@ generationWorker.onmessage = function (e) {
             // Failed while user invalidly waited
 
             generationRetryCount++;
-            if (generationRetryCount > MAX_GENERATION_RETRIES) {
+            if (generationRetryCount > MAX_WORKER_RETRIES) {
                 const loadingTitle = document.querySelector('#loading-overlay h2');
                 const loadingMessage = document.querySelector('#loading-overlay p');
                 const retryBtn = document.getElementById('btn-retry');
@@ -174,11 +175,8 @@ generationWorker.onmessage = function (e) {
                 return;
             }
 
-            // Re-post message to worker for retry
             isGenerating = true;
-            const config = getDifficultyParams(level);
-            config.level = level;
-            generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
+            generationWorker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
         }
     }
 };
@@ -238,9 +236,9 @@ function startLevel() {
     generationRetryCount = 0;
     pendingLevelStart = () => { };
 
-    const config = getDifficultyParams(level);
-    config.level = level;
-    generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
+    pendingConfig = getDifficultyParams(level);
+    pendingConfig.level = level;
+    generationWorker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
 }
 
 function startLevelWithData(puzzleData) {

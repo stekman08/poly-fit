@@ -55,10 +55,10 @@ export function findEnclosedCells(grid) {
     return enclosed;
 }
 
-/**
- * DOM-based Renderer - replaces Canvas rendering with CSS Grid
- * Benefits: automatic responsiveness, native touch handling, easier styling
- */
+function getShapeSignature(shape) {
+    return shape.map(b => `${b.x},${b.y}`).sort().join(';');
+}
+
 export class Renderer {
     constructor() {
         this.boardEl = document.getElementById('game-board');
@@ -221,10 +221,7 @@ export class Renderer {
             // Determine state early for caching
             const isDragging = piece.id === this.draggingPieceId;
 
-            // Fast path: skip ALL DOM operations if piece state unchanged
-            // During drag, only the dragged piece's x/y changes - other pieces can skip entirely
-            // Include shape signature to detect shape changes between levels (pieces reuse IDs)
-            const shapeKey = piece.currentShape.map(b => `${b.x},${b.y}`).sort().join(';');
+            const shapeKey = getShapeSignature(piece.currentShape);
             const stateKey = `${piece.x}:${piece.y}:${piece.rotation}:${piece.flipped}:${isDragging}:${shapeKey}`;
             if (el.dataset.stateKey === stateKey) {
                 return; // Nothing changed, skip all DOM operations
@@ -323,10 +320,8 @@ export class Renderer {
     }
 
     updatePieceShape(el, piece) {
-        // Fast cache check FIRST - include shape signature to detect changes between levels
-        // (pieces reuse IDs, and different pieces can have same rotation/flipped/color)
         const color = piece.color || COLORS[0];
-        const shapeKey = piece.currentShape.map(b => `${b.x},${b.y}`).sort().join(';');
+        const shapeKey = getShapeSignature(piece.currentShape);
         const cacheKey = `${piece.id}:${piece.rotation}:${piece.flipped}:${color}:${shapeKey}`;
         if (el.dataset.cacheKey === cacheKey) {
             return; // Nothing changed, skip ALL expensive operations

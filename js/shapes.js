@@ -53,6 +53,15 @@ export function normalizeShape(shape) {
     return result;
 }
 
+export function applyTransforms(baseShape, rotation, flipped) {
+    let shape = baseShape;
+    if (flipped) shape = flipShape(shape);
+    for (let i = 0; i < (rotation % 4); i++) {
+        shape = rotateShape(shape);
+    }
+    return normalizeShape(shape);
+}
+
 // Standard Polyominoes
 // Defined relative to 0,0
 export const SHAPES = {

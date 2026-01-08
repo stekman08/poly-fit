@@ -1,5 +1,5 @@
 
-import { rotateShape, flipShape, normalizeShape } from './shapes.js';
+import { applyTransforms } from './shapes.js';
 
 export class Game {
     constructor(puzzleData) {
@@ -27,15 +27,11 @@ export class Game {
                 piece.flipped === piece.solutionFlipped;
 
             if (!inCorrectPosition) {
-                // Calculate the solution shape
-                let solutionShape = piece.originalShape;
-                if (piece.solutionFlipped) {
-                    solutionShape = flipShape(solutionShape);
-                }
-                for (let i = 0; i < piece.solutionRotation; i++) {
-                    solutionShape = rotateShape(solutionShape);
-                }
-                solutionShape = normalizeShape(solutionShape);
+                const solutionShape = applyTransforms(
+                    piece.originalShape,
+                    piece.solutionRotation,
+                    piece.solutionFlipped
+                );
 
                 this.hintPiece = piece;
                 this.hintShape = solutionShape;
@@ -71,26 +67,15 @@ export class Game {
             needsRecalc = true;
         }
 
-        // If rotation/flip changed, recalculate currentShape
-        // We always start from the original 'shape' (base definition) and apply transforms
         if (needsRecalc) {
-            let s = piece.shape; // Base
-
-            // Apply flips first? Or rotations? Order matters for orientation but for tiling it just needs to be consistent.
-            if (piece.flipped) s = flipShape(s);
-
-            // Apply rotations
-            for (let i = 0; i < (piece.rotation % 4); i++) {
-                s = rotateShape(s);
-            }
-
-            // Normalize so 0,0 is top-left
-            // This is important because x,y represents top-left of the bounding box
-            piece.currentShape = normalizeShape(s);
+            piece.currentShape = applyTransforms(piece.shape, piece.rotation, piece.flipped);
         }
     }
 
     checkWin() {
+        if (!this.targetGrid || this.targetGrid.length === 0) {
+            return false;
+        }
         const rows = this.targetGrid.length;
         const cols = this.targetGrid[0].length;
 

@@ -34,4 +34,5 @@ export const HINT_DELAY = 300000;        // ms - show hint after 5 minutes inact
 export const WIN_TRANSITION_DELAY = 600; // ms - delay before next level after win
 
 // Puzzle generation
-export const MAX_GENERATION_RETRIES = 2000; // max attempts before giving up
+export const MAX_GENERATION_RETRIES = 2000; // max internal attempts in puzzle.js
+export const MAX_WORKER_RETRIES = 10; // max worker-level retries in main.js
