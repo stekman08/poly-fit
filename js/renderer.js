@@ -3,6 +3,59 @@ import { ConfettiSystem } from './effects/Confetti.js';
 import { getDockY } from './config/constants.js';
 
 /**
+ * Find empty cells that are enclosed (cannot reach board edge)
+ * Uses flood-fill from all edges to find reachable cells
+ * @param {number[][]} grid - The puzzle grid
+ * @returns {Set<string>} Set of "row,col" keys for enclosed cells
+ */
+export function findEnclosedCells(grid) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const reachable = new Set();
+
+    const key = (r, c) => `${r},${c}`;
+
+    // Flood-fill from a starting cell
+    function flood(startR, startC) {
+        const stack = [[startR, startC]];
+        while (stack.length > 0) {
+            const [r, c] = stack.pop();
+            const k = key(r, c);
+            if (reachable.has(k)) continue;
+            if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+
+            const val = grid[r][c];
+            // Can flood through empty (0) and outside (-2) cells
+            if (val !== 0 && val !== -2) continue;
+
+            reachable.add(k);
+            stack.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
+        }
+    }
+
+    // Start flood from all edge cells
+    for (let c = 0; c < cols; c++) {
+        flood(0, c);           // Top edge
+        flood(rows - 1, c);    // Bottom edge
+    }
+    for (let r = 0; r < rows; r++) {
+        flood(r, 0);           // Left edge
+        flood(r, cols - 1);    // Right edge
+    }
+
+    // Return set of enclosed cells (empty cells NOT reachable from edge)
+    const enclosed = new Set();
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (grid[r][c] === 0 && !reachable.has(key(r, c))) {
+                enclosed.add(key(r, c));
+            }
+        }
+    }
+    return enclosed;
+}
+
+/**
  * DOM-based Renderer - replaces Canvas rendering with CSS Grid
  * Benefits: automatic responsiveness, native touch handling, easier styling
  */
@@ -131,6 +184,9 @@ export class Renderer {
         // Update cell states (only runs once per level)
         const cells = this.boardEl.querySelectorAll('.board-cell');
 
+        // Find enclosed empty cells (cannot reach board edge)
+        const enclosedCells = findEnclosedCells(grid);
+
         let i = 0;
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -139,9 +195,11 @@ export class Renderer {
 
                 cell.classList.toggle('target', value === 1);
 
-                // value === -1: blocking hole, value === 0: empty inside puzzle → both dark
+                // value === -1: explicit blocking hole → dark
+                // value === 0 + enclosed: empty cell trapped inside → dark hole
                 // value === -2: outside puzzle shape → transparent
-                cell.classList.toggle('hole', value === -1 || value === 0);
+                const isEnclosed = enclosedCells.has(`${r},${c}`);
+                cell.classList.toggle('hole', value === -1 || isEnclosed);
                 cell.classList.toggle('outside', value === -2);
             }
         }
