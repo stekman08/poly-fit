@@ -36,7 +36,8 @@ export class InputHandler {
         this.lastTouchTime = 0;
         this.dragStartGridPos = null;
         this.dragStartScreenPos = null;
-        this.cachedOtherPieces = null; // Performance: cache other pieces during drag
+        this.cachedOtherPieces = null;
+        this.grabFlashTimeout = null;
 
         this.bindEvents();
     }
@@ -69,7 +70,7 @@ export class InputHandler {
         window.addEventListener('touchend', (e) => {
             this.lastTouchTime = Date.now();
             if (this.draggingPiece) {
-                const touch = e.changedTouches[0];
+                const touch = this.findTouchById(e.changedTouches, this.activeTouchId) || e.changedTouches[0];
                 this.handleEnd(touch?.clientX ?? this.dragStartPos.x, touch?.clientY ?? this.dragStartPos.y);
             }
         }, { passive: true });
@@ -195,10 +196,11 @@ export class InputHandler {
             this.cachedOtherPieces = this.game.pieces.filter(p => p !== piece);
             buildOccupancyCache(this.cachedOtherPieces, this.game.targetGrid);
 
-            // Trigger "Flash on Grab" effect
             pieceEl.classList.add('grab-flash');
-            setTimeout(() => {
+            if (this.grabFlashTimeout) clearTimeout(this.grabFlashTimeout);
+            this.grabFlashTimeout = setTimeout(() => {
                 pieceEl.classList.remove('grab-flash');
+                this.grabFlashTimeout = null;
             }, 200);
 
             // DON'T move the piece yet - wait for actual drag detection
