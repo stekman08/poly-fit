@@ -25,8 +25,9 @@ export function findEnclosedCells(grid) {
             if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
 
             const val = grid[r][c];
-            // Can flood through empty (0) and outside (-2) cells
-            if (val !== 0 && val !== -2) continue;
+            // Can flood through empty (0), outside (-2), and hole (-1) cells
+            // This determines which non-target cells can reach the board edge
+            if (val !== 0 && val !== -2 && val !== -1) continue;
 
             reachable.add(k);
             stack.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
@@ -43,11 +44,13 @@ export function findEnclosedCells(grid) {
         flood(r, cols - 1);    // Right edge
     }
 
-    // Return set of enclosed cells (empty cells NOT reachable from edge)
+    // Return set of enclosed cells (empty/hole cells NOT reachable from edge)
+    // These should be rendered as dark holes inside the puzzle
     const enclosed = new Set();
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-            if (grid[r][c] === 0 && !reachable.has(key(r, c))) {
+            const val = grid[r][c];
+            if ((val === 0 || val === -1) && !reachable.has(key(r, c))) {
                 enclosed.add(key(r, c));
             }
         }
@@ -195,12 +198,12 @@ export class Renderer {
 
                 cell.classList.toggle('target', value === 1);
 
-                // value === -1: explicit blocking hole → dark
-                // value === 0 + enclosed: empty cell trapped inside → dark hole
-                // value === -2: outside puzzle shape → transparent
+                // Enclosed cells (can't reach board edge) → dark hole
+                // Non-enclosed empty/hole cells → outside (transparent)
+                // value === -2: explicitly outside puzzle shape → transparent
                 const isEnclosed = enclosedCells.has(`${r},${c}`);
-                cell.classList.toggle('hole', value === -1 || isEnclosed);
-                cell.classList.toggle('outside', value === -2);
+                cell.classList.toggle('hole', isEnclosed);
+                cell.classList.toggle('outside', value === -2 || ((value === 0 || value === -1) && !isEnclosed));
             }
         }
     }
