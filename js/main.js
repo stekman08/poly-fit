@@ -75,6 +75,11 @@ if (urlLevel && urlLevel > 0) {
 
 let lastInteractionTime = Date.now();
 let hintShown = false;
+// Expose for testing - allows tests to skip 5-min hint wait
+Object.defineProperty(window, '__hintShown', {
+    get: () => hintShown,
+    set: (val) => { hintShown = val; }
+});
 let isWinning = false;
 let currentThemeIndex = 0;
 let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
@@ -82,12 +87,26 @@ let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation
 // Dirty flag for render optimization - only redraw when something changed
 let needsRender = true;
 
+// Animation loop control - stop when idle to save CPU/battery
+let animationId = null;
+window.__animationId = null; // Expose for testing
+
 // Request a render on next frame (call this when game state changes)
 function requestRender() {
     needsRender = true;
+    ensureLoopRunning();
 }
 // Expose globally for input handler
 window.requestRender = requestRender;
+
+// Start the loop if it's not already running
+function ensureLoopRunning() {
+    if (animationId === null) {
+        animationId = requestAnimationFrame(loop);
+        window.__animationId = animationId;
+    }
+}
+window.ensureLoopRunning = ensureLoopRunning;
 
 // Check if tutorial should be shown (first 3 times)
 function shouldShowTutorial() {
@@ -111,6 +130,7 @@ function hideTutorial() {
 function loop() {
     if (game) {
         // Check hint timer (doesn't need render, just time check)
+        const waitingForHint = !hintShown && Date.now() - lastInteractionTime < HINT_DELAY;
         if (!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) {
             const hint = game.getHint();
             if (hint) {
@@ -128,8 +148,21 @@ function loop() {
             renderer.draw(game, confettiActive);
             needsRender = false;
         }
+
+        // Stop loop when idle to save CPU/battery
+        // Keep running if: rendering needed, confetti active, or waiting for hint timer
+        if (needsRender || confettiActive || waitingForHint) {
+            animationId = requestAnimationFrame(loop);
+            window.__animationId = animationId;
+        } else {
+            animationId = null;
+            window.__animationId = null;
+        }
+    } else {
+        // No game yet, keep looping
+        animationId = requestAnimationFrame(loop);
+        window.__animationId = animationId;
     }
-    requestAnimationFrame(loop);
 }
 
 const generationWorker = new Worker('js/worker.js', { type: 'module' });
@@ -374,6 +407,7 @@ document.addEventListener('visibilitychange', () => {
             renderer.hideHint();
             hintShown = false;
         }
+        ensureLoopRunning();
     }
 });
 
@@ -583,4 +617,4 @@ if (startTitle && !startTitle.hasAttribute('data-theme-listener')) {
     startTitle.addEventListener('click', cycleTheme);
 }
 
-loop();
+ensureLoopRunning();

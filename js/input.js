@@ -38,6 +38,7 @@ export class InputHandler {
         this.dragStartScreenPos = null;
         this.cachedOtherPieces = null;
         this.grabFlashTimeout = null;
+        this.cachedPieceRects = null;
 
         this.bindEvents();
     }
@@ -119,8 +120,9 @@ export class InputHandler {
 
         // Iterate all rendered pieces
         if (this.renderer.pieceElements) {
-            for (const el of this.renderer.pieceElements.values()) {
-                const rect = el.getBoundingClientRect();
+            for (const [id, el] of this.renderer.pieceElements) {
+                // Use cached rect if available (avoids layout thrashing during drag)
+                const rect = this.cachedPieceRects?.get(String(id)) || el.getBoundingClientRect();
 
                 // Calculate distance to rectangle (0 if inside)
                 const dx = Math.max(rect.left - x, 0, x - rect.right);
@@ -195,6 +197,18 @@ export class InputHandler {
             // Cache both the array and the Set to avoid filter() on every touchmove
             this.cachedOtherPieces = this.game.pieces.filter(p => p !== piece);
             buildOccupancyCache(this.cachedOtherPieces, this.game.targetGrid);
+
+            // Cache piece rects to avoid layout thrashing during drag
+            // (getBoundingClientRect forces layout recalculation)
+            this.cachedPieceRects = new Map();
+            for (const [id, el] of this.renderer.pieceElements) {
+                if (String(id) !== String(piece.id)) {
+                    this.cachedPieceRects.set(String(id), el.getBoundingClientRect());
+                }
+            }
+
+            // Ensure animation loop is running for drag updates
+            if (window.ensureLoopRunning) window.ensureLoopRunning();
 
             pieceEl.classList.add('grab-flash');
             if (this.grabFlashTimeout) clearTimeout(this.grabFlashTimeout);
@@ -510,6 +524,7 @@ export class InputHandler {
         this.dragStartGridPos = null;
         this.dragStartScreenPos = null;
         this.cachedOtherPieces = null;
+        this.cachedPieceRects = null;
         clearOccupancyCache();
     }
 }
