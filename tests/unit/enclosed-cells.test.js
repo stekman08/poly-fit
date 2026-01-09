@@ -125,11 +125,11 @@ describe('findEnclosedCells', () => {
         expect(enclosed.size).toBe(0);
     });
 
-    it('handles explicit holes (-1) separately from empty cells', () => {
+    it('detects enclosed hole (-1) surrounded by targets', () => {
         // 1  1  1
         // 1 -1  1
         // 1  1  1
-        // -1 is a hole, not an empty cell - should not be in enclosed set
+        // -1 hole surrounded by targets should be enclosed (rendered as dark hole)
         const grid = [
             [1, 1, 1],
             [1, -1, 1],
@@ -138,8 +138,25 @@ describe('findEnclosedCells', () => {
 
         const enclosed = findEnclosedCells(grid);
 
-        // -1 cells are not empty (0), so they shouldn't be in enclosed set
-        expect(enclosed.has('1,1')).toBe(false);
+        // -1 cells that can't reach edge should be in enclosed set
+        expect(enclosed.has('1,1')).toBe(true);
+        expect(enclosed.size).toBe(1);
+    });
+
+    it('does NOT mark edge-connected hole (-1) as enclosed', () => {
+        // -1  1  1
+        //  1  1  1
+        //  1  1  1
+        // -1 at edge can reach outside, should NOT be enclosed
+        const grid = [
+            [-1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1]
+        ];
+
+        const enclosed = findEnclosedCells(grid);
+
+        expect(enclosed.has('0,0')).toBe(false);
         expect(enclosed.size).toBe(0);
     });
 
