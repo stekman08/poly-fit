@@ -35,8 +35,6 @@ class Particle {
         ctx.rotate(this.rotation);
         ctx.globalAlpha = this.life;
 
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
         ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
 
