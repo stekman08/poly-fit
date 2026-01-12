@@ -59,7 +59,7 @@ body {
     grid-template-columns: repeat(var(--cols), var(--cell-size));
     grid-template-rows: repeat(var(--rows), var(--cell-size));
     gap: 0;
-    margin: 250px auto 20px;
+    margin: 150px auto 20px;
     position: relative;
     filter: drop-shadow(0 0 15px rgba(213, 0, 249, 0.25));
 }
