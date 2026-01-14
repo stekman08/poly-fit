@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createCheatCodeDetector } from '../../js/cheat-code.js';
+import { createCheatCodeDetector, setupCheatCode } from '../../js/cheat-code.js';
 
 describe('CheatCodeDetector', () => {
     beforeEach(() => {
@@ -207,5 +207,151 @@ describe('CheatCodeDetector', () => {
             detector.reset();
             expect(detector.getProgress()).toBe(0);
         });
+    });
+});
+
+describe('setupCheatCode', () => {
+    let mockTitleEl;
+    let mockLevelEl;
+    let originalDocument;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        originalDocument = global.document;
+
+        // Create mock elements with event listener support
+        mockTitleEl = {
+            addEventListener: vi.fn()
+        };
+        mockLevelEl = {
+            addEventListener: vi.fn()
+        };
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        global.document = originalDocument;
+    });
+
+    it('returns null when title-display element is missing', () => {
+        global.document = {
+            getElementById: vi.fn().mockReturnValue(null)
+        };
+
+        const result = setupCheatCode({ onSuccess: vi.fn() });
+
+        expect(result).toBeNull();
+    });
+
+    it('returns null when level-display element is missing', () => {
+        global.document = {
+            getElementById: vi.fn((id) => {
+                if (id === 'title-display') return mockTitleEl;
+                return null;
+            })
+        };
+
+        const result = setupCheatCode({ onSuccess: vi.fn() });
+
+        expect(result).toBeNull();
+    });
+
+    it('clicking title element calls tap with TITLE', () => {
+        global.document = {
+            getElementById: vi.fn((id) => {
+                if (id === 'title-display') return mockTitleEl;
+                if (id === 'level-display') return mockLevelEl;
+                return null;
+            })
+        };
+
+        const detector = setupCheatCode({ onSuccess: vi.fn() });
+
+        // Get the click handler
+        const clickHandler = mockTitleEl.addEventListener.mock.calls[0][1];
+        const mockEvent = { stopPropagation: vi.fn() };
+
+        clickHandler(mockEvent);
+
+        expect(mockEvent.stopPropagation).toHaveBeenCalled();
+        expect(detector.getProgress()).toBe(1);
+    });
+
+    it('clicking level element calls tap with LEVEL', () => {
+        global.document = {
+            getElementById: vi.fn((id) => {
+                if (id === 'title-display') return mockTitleEl;
+                if (id === 'level-display') return mockLevelEl;
+                return null;
+            })
+        };
+
+        const detector = setupCheatCode({ onSuccess: vi.fn() });
+
+        // First tap TITLE to start sequence
+        const titleHandler = mockTitleEl.addEventListener.mock.calls[0][1];
+        titleHandler({ stopPropagation: vi.fn() });
+
+        // Then tap LEVEL
+        const levelHandler = mockLevelEl.addEventListener.mock.calls[0][1];
+        const mockEvent = { stopPropagation: vi.fn() };
+        levelHandler(mockEvent);
+
+        expect(mockEvent.stopPropagation).toHaveBeenCalled();
+        expect(detector.getProgress()).toBe(2);
+    });
+
+    it('calls haptics.vibrateRotate on progress', () => {
+        const mockHaptics = { vibrateRotate: vi.fn(), vibrateWin: vi.fn() };
+
+        global.document = {
+            getElementById: vi.fn((id) => {
+                if (id === 'title-display') return mockTitleEl;
+                if (id === 'level-display') return mockLevelEl;
+                return null;
+            })
+        };
+
+        setupCheatCode({ onSuccess: vi.fn(), haptics: mockHaptics });
+
+        // Trigger title click
+        const titleHandler = mockTitleEl.addEventListener.mock.calls[0][1];
+        titleHandler({ stopPropagation: vi.fn() });
+
+        expect(mockHaptics.vibrateRotate).toHaveBeenCalled();
+    });
+
+    it('calls haptics.vibrateWin and onSuccess when sequence completes', () => {
+        const mockHaptics = { vibrateRotate: vi.fn(), vibrateWin: vi.fn() };
+        const onSuccess = vi.fn();
+
+        global.document = {
+            getElementById: vi.fn((id) => {
+                if (id === 'title-display') return mockTitleEl;
+                if (id === 'level-display') return mockLevelEl;
+                return null;
+            })
+        };
+
+        setupCheatCode({ onSuccess, haptics: mockHaptics });
+
+        const titleHandler = mockTitleEl.addEventListener.mock.calls[0][1];
+        const levelHandler = mockLevelEl.addEventListener.mock.calls[0][1];
+        const mockEvent = { stopPropagation: vi.fn() };
+
+        // Complete sequence: T, LL, TTT, LLLL
+        titleHandler(mockEvent);  // 1
+        levelHandler(mockEvent);  // 2
+        levelHandler(mockEvent);  // 3
+        titleHandler(mockEvent);  // 4
+        titleHandler(mockEvent);  // 5
+        titleHandler(mockEvent);  // 6
+        levelHandler(mockEvent);  // 7
+        levelHandler(mockEvent);  // 8
+        levelHandler(mockEvent);  // 9
+        levelHandler(mockEvent);  // 10
+
+        expect(mockHaptics.vibrateWin).toHaveBeenCalled();
+        expect(onSuccess).toHaveBeenCalled();
     });
 });
