@@ -4,15 +4,16 @@ import { InputHandler } from './input.js';
 import { sounds } from './sounds.js';
 import { haptics } from './haptics.js';
 import { getShapeDimensions } from './shapes.js';
-import { getDifficultyParams } from './config/difficulty.js';
 import {
     getDockY,
     getMaxDockY,
     HINT_DELAY,
-    WIN_TRANSITION_DELAY,
-    MAX_WORKER_RETRIES
+    WIN_TRANSITION_DELAY
 } from './config/constants.js';
 import { setupCheatCode } from './cheat-code.js';
+import { safeGetItem, safeSetItem } from './storage.js';
+import { createThemeManager } from './theme-manager.js';
+import { createWorkerManager } from './worker-manager.js';
 
 const levelDisplay = document.getElementById('level-display');
 const startScreen = document.getElementById('start-screen');
@@ -28,32 +29,6 @@ const btnBack = document.getElementById('btn-back');
 // Tutorial configuration
 const TUTORIAL_STORAGE_KEY = 'polyfit-tutorial-shown';
 const TUTORIAL_MAX_SHOWS = 3;
-
-// Color themes
-const THEMES = [
-    { name: 'cyan', primary: '#00E5FF', secondary: '#00B8CC' },
-    { name: 'magenta', primary: '#F92672', secondary: '#E02266' },
-    { name: 'green', primary: '#A6E22E', secondary: '#8FD125' },
-    { name: 'orange', primary: '#FD971F', secondary: '#E0851A' }
-];
-const THEME_STORAGE_KEY = 'polyfit-theme';
-
-// Safe localStorage helpers (handles private browsing, disabled storage, etc.)
-function safeGetItem(key, defaultValue = null) {
-    try {
-        return localStorage.getItem(key) ?? defaultValue;
-    } catch {
-        return defaultValue;
-    }
-}
-
-function safeSetItem(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    } catch {
-        // Storage unavailable
-    }
-}
 
 // DOM-based renderer (no canvas needed)
 const renderer = new Renderer();
@@ -82,8 +57,9 @@ Object.defineProperty(window, '__hintShown', {
     set: (val) => { hintShown = val; }
 });
 let isWinning = false;
-let currentThemeIndex = 0;
-let generationRetryCount = 0; // Prevent infinite recursion on puzzle generation failure
+
+// Theme manager
+const themeManager = createThemeManager({ haptics });
 
 // Dirty flag for render optimization - only redraw when something changed
 let needsRender = true;
@@ -166,113 +142,34 @@ function loop() {
     }
 }
 
-const generationWorker = new Worker('js/worker.js', { type: 'module' });
-window.__generationWorker = generationWorker;
-let preGeneratedPuzzle = null;
-let isGenerating = false;
-let pendingLevelStart = null;
-let pendingConfig = null;
-
-// Handle worker messages
-generationWorker.onmessage = function (e) {
-    const { type, puzzle, error, reqId } = e.data;
-
-    if (type === 'PUZZLE_GENERATED') {
-        generationRetryCount = 0; // Reset on success
-
-        if (pendingLevelStart) {
-            // We were waiting for this!
-            pendingLevelStart = null;
-            document.getElementById('loading-overlay').classList.add('hidden');
-            startLevelWithData(puzzle);
-        } else {
-            // Store for later
-            preGeneratedPuzzle = puzzle;
-        }
-        isGenerating = false;
-    } else if (type === 'ERROR') {
-        isGenerating = false;
-
-        if (pendingLevelStart) {
-            // Failed while user invalidly waited
-
-            generationRetryCount++;
-            if (generationRetryCount > MAX_WORKER_RETRIES) {
-                const loadingTitle = document.querySelector('#loading-overlay h2');
-                const loadingMessage = document.querySelector('#loading-overlay p');
-                const retryBtn = document.getElementById('btn-retry');
-                if (loadingTitle) loadingTitle.textContent = 'GENERATION FAILED';
-                if (loadingMessage) loadingMessage.textContent = 'Could not generate puzzle.';
-                if (retryBtn) retryBtn.classList.remove('hidden');
-                pendingLevelStart = null;
-                isGenerating = false;
-                return;
-            }
-
-            isGenerating = true;
-            generationWorker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
-        }
+// Worker manager for puzzle generation
+const workerManager = createWorkerManager({
+    onPuzzleReady: startLevelWithData,
+    onError: () => { },
+    showLoading: () => {
+        const overlay = document.getElementById('loading-overlay');
+        const loadingTitle = document.querySelector('#loading-overlay h2');
+        const loadingMessage = document.querySelector('#loading-overlay p');
+        if (loadingTitle) loadingTitle.textContent = 'GENERATING...';
+        if (loadingMessage) loadingMessage.textContent = 'Constructing tight puzzle...';
+        overlay.classList.remove('hidden');
+    },
+    hideLoading: () => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    },
+    showError: () => {
+        const loadingTitle = document.querySelector('#loading-overlay h2');
+        const loadingMessage = document.querySelector('#loading-overlay p');
+        const retryBtn = document.getElementById('btn-retry');
+        if (loadingTitle) loadingTitle.textContent = 'GENERATION FAILED';
+        if (loadingMessage) loadingMessage.textContent = 'Could not generate puzzle.';
+        if (retryBtn) retryBtn.classList.remove('hidden');
     }
-};
-
-function preGenerateNextLevel(nextLevel) {
-    if (isGenerating) return; // Already busy
-
-    // Don't pre-generate if we already have the right one
-    if (preGeneratedPuzzle && preGeneratedPuzzle.level === nextLevel) return;
-
-    isGenerating = true;
-    generationRetryCount = 0; // Reset for new attempt
-    preGeneratedPuzzle = null; // Clear old
-
-    const config = getDifficultyParams(nextLevel);
-    // Tag with level for verification
-    config.level = nextLevel;
-
-    generationWorker.postMessage({
-        type: 'GENERATE',
-        config,
-        reqId: Date.now()
-    });
-}
+});
+window.__generationWorker = workerManager.getWorker();
 
 function startLevel() {
-    // Check if we have a pre-generated puzzle for this level
-    if (preGeneratedPuzzle && preGeneratedPuzzle.level === level) {
-        const p = preGeneratedPuzzle;
-        preGeneratedPuzzle = null;
-        startLevelWithData(p);
-
-        // Immediately start working on the NEXT one
-        preGenerateNextLevel(level + 1);
-        return;
-    }
-
-    // Checking if we are currently generating THIS level
-    // If so, show loading screen and wait
-    if (isGenerating) {
-        // We assume the worker is working on 'level' because we request it on level up
-        // But strictly we should track request ID. For now assume sequential play.
-        document.getElementById('loading-overlay').classList.remove('hidden');
-        pendingLevelStart = () => { }; // Marker that we are waiting
-        return;
-    }
-
-    // Nothing pre-generated, and not generating. Start now.
-    // This happens on first load, or jumping levels.
-    document.getElementById('loading-overlay').classList.remove('hidden');
-    // Prepare for generation
-    // Reset error text in case we showed failure before
-    document.querySelector('#loading-overlay h2').textContent = 'GENERATION';
-    document.querySelector('#loading-overlay p').textContent = 'Constructing tight puzzle...';
-
-    isGenerating = true;
-    generationRetryCount = 0;
-    pendingLevelStart = () => { };
-
-    pendingConfig = getDifficultyParams(level);
-    pendingConfig.level = level;
-    generationWorker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
+    workerManager.startLevel(level);
 }
 
 function startLevelWithData(puzzleData) {
@@ -412,38 +309,12 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-function applyTheme(theme) {
-    document.documentElement.style.setProperty('--neon-blue', theme.primary);
-    // Update button borders and text shadows that use the theme color
-}
-
-function cycleTheme() {
-    currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
-    const theme = THEMES[currentThemeIndex];
-    applyTheme(theme);
-    safeSetItem(THEME_STORAGE_KEY, theme.name);
-    haptics.vibrateRotate(); // Subtle feedback
-}
-
-
-// Load saved theme
-function loadTheme() {
-    const savedTheme = safeGetItem(THEME_STORAGE_KEY);
-    if (savedTheme) {
-        const index = THEMES.findIndex(t => t.name === savedTheme);
-        if (index !== -1) {
-            currentThemeIndex = index;
-            applyTheme(THEMES[index]);
-        }
-    }
-}
-
 // Initialize cheat code detection
 setupCheatCode({
     onSuccess: () => { lastInteractionTime = 0; },
     haptics
 });
-loadTheme();
+themeManager.load();
 showStartScreen();
 
 function showStartScreen() {
@@ -535,14 +406,8 @@ if (btnRetry) {
         if (loadingMessage) loadingMessage.textContent = 'Constructing tight puzzle...';
         btnRetry.classList.add('hidden');
 
-        // Reset generation state and retry
-        generationRetryCount = 0;
-        isGenerating = true;
-        pendingLevelStart = () => { };
-
-        const config = getDifficultyParams(level);
-        config.level = level;
-        generationWorker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
+        // Retry generation
+        workerManager.retry(level);
     });
 }
 
@@ -551,7 +416,7 @@ const startTitle = document.querySelector('.start-modal .neon-text');
 if (startTitle && !startTitle.hasAttribute('data-theme-listener')) {
     startTitle.setAttribute('data-theme-listener', 'true');
     startTitle.style.cursor = 'pointer';
-    startTitle.addEventListener('click', cycleTheme);
+    startTitle.addEventListener('click', () => themeManager.cycle());
 }
 
 ensureLoopRunning();

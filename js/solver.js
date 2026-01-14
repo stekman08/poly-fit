@@ -1,5 +1,5 @@
 import { applyTransforms } from './shapes.js';
-import { createGrid } from './utils.js';
+import { createGrid, getShapeSignature } from './utils.js';
 
 /**
  * optimized solver to count solutions for a given puzzle configuration
@@ -15,7 +15,7 @@ const orientationCache = new Map();
  * @returns {Array} Array of shape arrays
  */
 function getUniqueOrientations(baseShape) {
-    const sigKey = JSON.stringify(baseShape);
+    const sigKey = getShapeSignature(baseShape);
     if (orientationCache.has(sigKey)) {
         return orientationCache.get(sigKey);
     }
@@ -26,7 +26,7 @@ function getUniqueOrientations(baseShape) {
     for (let f = 0; f < 2; f++) {
         for (let r = 0; r < 4; r++) {
             const s = applyTransforms(baseShape, r, f === 1);
-            const sig = JSON.stringify(s);
+            const sig = getShapeSignature(s);
             if (!seen.has(sig)) {
                 seen.add(sig);
                 uniques.push(s);
