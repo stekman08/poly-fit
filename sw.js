@@ -1,4 +1,4 @@
-// Version: 3e8ec95 • 2026-01-14 19:03
+// Version: 423ecb0 • 2026-01-14 21:43
 // PolyFit Service Worker
 
 // Cache name resolved once and reused (prevents race conditions)

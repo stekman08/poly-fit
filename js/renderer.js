@@ -1,6 +1,7 @@
 import { COLORS, getShapeDimensions } from './shapes.js';
 import { ConfettiSystem } from './effects/Confetti.js';
 import { getDockY } from './config/constants.js';
+import { getShapeSignature } from './utils.js';
 
 /**
  * Find empty cells that are enclosed (cannot reach board edge)
@@ -56,10 +57,6 @@ export function findEnclosedCells(grid) {
         }
     }
     return enclosed;
-}
-
-function getShapeSignature(shape) {
-    return shape.map(b => `${b.x},${b.y}`).sort().join(';');
 }
 
 export class Renderer {
@@ -242,8 +239,8 @@ export class Renderer {
             // because .dragging CSS changes left/top which affects getBoundingClientRect()
             const isInBoard = el.parentElement === this.boardEl;
             const justStartingDockDrag = isDragging &&
-                                         !isInBoard &&
-                                         el.style.position !== 'fixed';
+                !isInBoard &&
+                el.style.position !== 'fixed';
 
             let dockDragOrigin = null;
             if (justStartingDockDrag) {
@@ -346,10 +343,13 @@ export class Renderer {
         // Clear and rebuild blocks
         el.innerHTML = '';
 
+        // Create Set for O(1) lookup instead of O(n) shape.some()
+        const blockSet = new Set(shape.map(b => `${b.x},${b.y}`));
+
         // Create a grid of the shape
         for (let y = 0; y < dims.height; y++) {
             for (let x = 0; x < dims.width; x++) {
-                const hasBlock = shape.some(b => b.x === x && b.y === y);
+                const hasBlock = blockSet.has(`${x},${y}`);
 
                 if (hasBlock) {
                     const block = document.createElement('div');
@@ -387,9 +387,11 @@ export class Renderer {
             this.ghostEl.style.color = color;
 
             this.ghostEl.innerHTML = '';
+            // Create Set for O(1) lookup instead of O(n) shape.some()
+            const blockSet = new Set(shape.map(b => `${b.x},${b.y}`));
             for (let py = 0; py < dims.height; py++) {
                 for (let px = 0; px < dims.width; px++) {
-                    const hasBlock = shape.some(b => b.x === px && b.y === py);
+                    const hasBlock = blockSet.has(`${px},${py}`);
                     if (hasBlock) {
                         const block = document.createElement('div');
                         block.className = 'piece-block';
@@ -436,9 +438,11 @@ export class Renderer {
 
         // Rebuild blocks
         this.hintEl.innerHTML = '';
+        // Create Set for O(1) lookup instead of O(n) shape.some()
+        const blockSet = new Set(shape.map(b => `${b.x},${b.y}`));
         for (let py = 0; py < dims.height; py++) {
             for (let px = 0; px < dims.width; px++) {
-                const hasBlock = shape.some(b => b.x === px && b.y === py);
+                const hasBlock = blockSet.has(`${px},${py}`);
                 if (hasBlock) {
                     const block = document.createElement('div');
                     block.className = 'piece-block';

@@ -24,3 +24,21 @@ export function shuffleArray(arr) {
 export function createGrid(rows, cols) {
     return Array(rows).fill(0).map(() => Array(cols).fill(0));
 }
+
+/**
+ * Get a canonical signature for a shape (order-independent)
+ * @param {Array<{x: number, y: number}>} shape - Array of blocks
+ * @returns {string} Canonical signature string
+ */
+export function getShapeSignature(shape) {
+    return shape.map(b => `${b.x},${b.y}`).sort().join(';');
+}
+
+/**
+ * Get a random element from an array
+ * @param {Array} arr - Array to pick from
+ * @returns {*} Random element
+ */
+export function getRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
