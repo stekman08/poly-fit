@@ -105,6 +105,158 @@ test('secret hint trigger works with tap sequence', async ({ page }) => {
     expect(hintAfter).not.toBeNull();
 });
 
+test('cheat code works after wrong first tap (LEVEL)', async ({ page }) => {
+    test.setTimeout(120000);
+    await page.goto('/');
+
+    await page.waitForFunction(() => window.__generationWorker);
+
+    await page.evaluate(() => {
+        const mockPuzzle = {
+            level: 1,
+            boardRows: 5,
+            boardCols: 5,
+            targetGrid: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]],
+            pieces: [{
+                id: 1,
+                shape: [[1]],
+                originalShape: [[1]],
+                color: '#ff0000',
+                solutionX: 0,
+                solutionY: 0,
+                solutionRotation: 0,
+                solutionFlipped: false
+            }]
+        };
+
+        const realWorker = window.__generationWorker;
+        realWorker.postMessage = function (data) {
+            if (data.type === 'GENERATE') {
+                setTimeout(() => {
+                    realWorker.onmessage({
+                        data: { type: 'PUZZLE_GENERATED', puzzle: mockPuzzle, reqId: data.reqId }
+                    });
+                }, 10);
+            }
+        };
+    });
+
+    await page.click('#btn-new-game');
+    await page.click('#btn-got-it');
+    await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/, { timeout: 10000 });
+    await page.waitForFunction(() => window.game && window.game.pieces.length > 0);
+
+    const title = page.locator('#title-display');
+    const level = page.locator('#level-display');
+
+    // Wrong first tap (LEVEL) - should reset
+    await level.click();
+    await page.waitForTimeout(100);
+
+    // Now do correct sequence
+    await title.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+
+    await page.waitForTimeout(200);
+    const hintAfter = await page.evaluate(() => window.game.hintPiece);
+    expect(hintAfter).not.toBeNull();
+});
+
+test('cheat code restarts when tapping TITLE mid-sequence', async ({ page }) => {
+    test.setTimeout(120000);
+    await page.goto('/');
+
+    await page.waitForFunction(() => window.__generationWorker);
+
+    await page.evaluate(() => {
+        const mockPuzzle = {
+            level: 1,
+            boardRows: 5,
+            boardCols: 5,
+            targetGrid: [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]],
+            pieces: [{
+                id: 1,
+                shape: [[1]],
+                originalShape: [[1]],
+                color: '#ff0000',
+                solutionX: 0,
+                solutionY: 0,
+                solutionRotation: 0,
+                solutionFlipped: false
+            }]
+        };
+
+        const realWorker = window.__generationWorker;
+        realWorker.postMessage = function (data) {
+            if (data.type === 'GENERATE') {
+                setTimeout(() => {
+                    realWorker.onmessage({
+                        data: { type: 'PUZZLE_GENERATED', puzzle: mockPuzzle, reqId: data.reqId }
+                    });
+                }, 10);
+            }
+        };
+    });
+
+    await page.click('#btn-new-game');
+    await page.click('#btn-got-it');
+    await expect(page.locator('#loading-overlay')).toHaveClass(/hidden/, { timeout: 10000 });
+    await page.waitForFunction(() => window.game && window.game.pieces.length > 0);
+
+    const title = page.locator('#title-display');
+    const level = page.locator('#level-display');
+
+    // Start sequence correctly
+    await title.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+
+    // Tap TITLE when expecting LEVEL - this should restart
+    await title.click();
+    await page.waitForTimeout(100);
+
+    // Continue from restart point (TITLE already counted as 1)
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await title.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+    await page.waitForTimeout(100);
+    await level.click();
+
+    await page.waitForTimeout(200);
+    const hintAfter = await page.evaluate(() => window.game.hintPiece);
+    expect(hintAfter).not.toBeNull();
+});
+
 test('header menu button returns to start screen', async ({ page }) => {
     await page.goto('/');
     await page.click('#btn-new-game');
