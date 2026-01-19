@@ -78,6 +78,9 @@ export function setupCheatCode(callbacks = {}) {
 
     if (!titleEl || !levelEl) return null;
 
+    if (titleEl.hasAttribute('data-cheat-listener')) return null;
+    titleEl.setAttribute('data-cheat-listener', 'true');
+
     const detector = createCheatCodeDetector({
         onSuccess: () => {
             if (haptics) haptics.vibrateWin();
