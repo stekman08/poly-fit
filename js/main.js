@@ -107,8 +107,8 @@ function hideTutorial() {
 function loop() {
     if (game) {
         // Check hint timer (doesn't need render, just time check)
-        const waitingForHint = !hintShown && Date.now() - lastInteractionTime < HINT_DELAY;
-        if (!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) {
+        const waitingForHint = !hintShown && !forceShowHint && Date.now() - lastInteractionTime < HINT_DELAY;
+        if ((!hintShown && Date.now() - lastInteractionTime > HINT_DELAY) || forceShowHint) {
             const hint = game.getHint();
             if (hint) {
                 renderer.showHint(hint);
@@ -117,6 +117,7 @@ function loop() {
             // Mark as checked regardless of whether hint was shown
             // (prevents recalculating every frame if no hint available)
             hintShown = true;
+            forceShowHint = false;
         }
 
         // Only render when something changed OR confetti is animating
@@ -241,6 +242,7 @@ function startLevelWithData(puzzleData) {
     renderer.hideHint();
     lastInteractionTime = Date.now();
     hintShown = false;
+    forceShowHint = false;
     isWinning = false;
     levelDisplay.innerText = `LEVEL ${level}`;
     needsRender = true; // Force render after setting up game
@@ -309,9 +311,12 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+// Force hint flag for cheat code trigger
+let forceShowHint = false;
+
 // Initialize cheat code detection
 setupCheatCode({
-    onSuccess: () => { lastInteractionTime = 0; },
+    onSuccess: () => { forceShowHint = true; },
     haptics
 });
 themeManager.load();

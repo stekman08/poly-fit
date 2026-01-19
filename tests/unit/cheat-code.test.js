@@ -213,6 +213,7 @@ describe('CheatCodeDetector', () => {
 describe('setupCheatCode', () => {
     let mockTitleEl;
     let mockLevelEl;
+    let mockAttributes;
     let originalDocument;
 
     beforeEach(() => {
@@ -220,8 +221,11 @@ describe('setupCheatCode', () => {
         originalDocument = global.document;
 
         // Create mock elements with event listener support
+        mockAttributes = {};
         mockTitleEl = {
-            addEventListener: vi.fn()
+            addEventListener: vi.fn(),
+            hasAttribute: vi.fn((attr) => !!mockAttributes[attr]),
+            setAttribute: vi.fn((attr, value) => { mockAttributes[attr] = value; })
         };
         mockLevelEl = {
             addEventListener: vi.fn()
