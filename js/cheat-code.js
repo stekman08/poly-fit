@@ -1,7 +1,6 @@
 /**
  * Cheat Code Detector
- * Sequence: Title(1) -> Level(2) -> Title(3) -> Level(4)
- * Total: 10 taps alternating between TITLE and LEVEL
+ * Sequence: 5x Title tap
  */
 
 /**
@@ -13,7 +12,7 @@
  * @returns {Object} Detector with tap(), reset(), getProgress(), getExpectedLength()
  */
 export function createCheatCodeDetector(options = {}) {
-    const EXPECTED = ['TITLE', 'LEVEL', 'LEVEL', 'TITLE', 'TITLE', 'TITLE', 'LEVEL', 'LEVEL', 'LEVEL', 'LEVEL'];
+    const EXPECTED = ['TITLE', 'TITLE', 'TITLE', 'TITLE', 'TITLE'];
     const RESET_DELAY = options.resetDelay ?? 1500;
 
     let tapIndex = 0;
@@ -32,24 +31,20 @@ export function createCheatCodeDetector(options = {}) {
         resetTimer = setTimeout(reset, RESET_DELAY);
 
         if (targetName === EXPECTED[tapIndex]) {
-            // Correct tap
             tapIndex++;
             onProgress(tapIndex, EXPECTED.length);
-
             if (tapIndex >= EXPECTED.length) {
-                // Sequence complete!
                 onSuccess();
                 reset();
                 return { success: true, progress: EXPECTED.length };
             }
             return { success: false, progress: tapIndex };
         } else if (targetName === 'TITLE') {
-            // Wrong tap, but TITLE can restart sequence
+            // Wrong position but TITLE restarts sequence
             tapIndex = 1;
             onProgress(tapIndex, EXPECTED.length);
             return { success: false, progress: tapIndex, restarted: true };
         } else {
-            // Wrong tap - full reset
             reset();
             return { success: false, progress: 0, reset: true };
         }
