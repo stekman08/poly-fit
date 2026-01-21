@@ -11,20 +11,15 @@ describe('CheatCodeDetector', () => {
     });
 
     describe('correct sequence', () => {
-        it('triggers success on complete sequence: T, LL, TTT, LLLL', () => {
+        it('triggers success on complete sequence: 5x TITLE', () => {
             const onSuccess = vi.fn();
             const detector = createCheatCodeDetector({ onSuccess });
 
             detector.tap('TITLE');   // 1
-            detector.tap('LEVEL');   // 2
-            detector.tap('LEVEL');   // 3
+            detector.tap('TITLE');   // 2
+            detector.tap('TITLE');   // 3
             detector.tap('TITLE');   // 4
-            detector.tap('TITLE');   // 5
-            detector.tap('TITLE');   // 6
-            detector.tap('LEVEL');   // 7
-            detector.tap('LEVEL');   // 8
-            detector.tap('LEVEL');   // 9
-            const result = detector.tap('LEVEL'); // 10
+            const result = detector.tap('TITLE'); // 5
 
             expect(result.success).toBe(true);
             expect(onSuccess).toHaveBeenCalledOnce();
@@ -35,21 +30,21 @@ describe('CheatCodeDetector', () => {
             const detector = createCheatCodeDetector({ onProgress });
 
             detector.tap('TITLE');
-            expect(onProgress).toHaveBeenCalledWith(1, 10);
+            expect(onProgress).toHaveBeenCalledWith(1, 5);
 
-            detector.tap('LEVEL');
-            expect(onProgress).toHaveBeenCalledWith(2, 10);
+            detector.tap('TITLE');
+            expect(onProgress).toHaveBeenCalledWith(2, 5);
 
-            detector.tap('LEVEL');
-            expect(onProgress).toHaveBeenCalledWith(3, 10);
+            detector.tap('TITLE');
+            expect(onProgress).toHaveBeenCalledWith(3, 5);
         });
 
         it('returns correct progress values', () => {
             const detector = createCheatCodeDetector();
 
             expect(detector.tap('TITLE').progress).toBe(1);
-            expect(detector.tap('LEVEL').progress).toBe(2);
-            expect(detector.tap('LEVEL').progress).toBe(3);
+            expect(detector.tap('TITLE').progress).toBe(2);
+            expect(detector.tap('TITLE').progress).toBe(3);
         });
 
         it('getProgress() tracks current position', () => {
@@ -58,13 +53,13 @@ describe('CheatCodeDetector', () => {
             expect(detector.getProgress()).toBe(0);
             detector.tap('TITLE');
             expect(detector.getProgress()).toBe(1);
-            detector.tap('LEVEL');
+            detector.tap('TITLE');
             expect(detector.getProgress()).toBe(2);
         });
 
-        it('getExpectedLength() returns 10', () => {
+        it('getExpectedLength() returns 5', () => {
             const detector = createCheatCodeDetector();
-            expect(detector.getExpectedLength()).toBe(10);
+            expect(detector.getExpectedLength()).toBe(5);
         });
     });
 
@@ -80,26 +75,11 @@ describe('CheatCodeDetector', () => {
             expect(detector.getProgress()).toBe(0);
         });
 
-        it('restarts from 1 when tapping TITLE at wrong time', () => {
+        it('resets when tapping LEVEL mid-sequence', () => {
             const detector = createCheatCodeDetector();
 
             detector.tap('TITLE');  // progress: 1
-            detector.tap('LEVEL');  // progress: 2
-            // Now expecting LEVEL, but tap TITLE
-            const result = detector.tap('TITLE');
-
-            expect(result.restarted).toBe(true);
-            expect(result.progress).toBe(1);
-            expect(detector.getProgress()).toBe(1);
-        });
-
-        it('resets when tapping LEVEL at wrong time (expecting TITLE)', () => {
-            const detector = createCheatCodeDetector();
-
-            detector.tap('TITLE');  // progress: 1
-            detector.tap('LEVEL');  // progress: 2
-            detector.tap('LEVEL');  // progress: 3
-            // Now expecting TITLE, but tap LEVEL
+            detector.tap('TITLE');  // progress: 2
             const result = detector.tap('LEVEL');
 
             expect(result.reset).toBe(true);
@@ -137,7 +117,7 @@ describe('CheatCodeDetector', () => {
             detector.tap('TITLE');
             vi.advanceTimersByTime(1000);
 
-            detector.tap('LEVEL');
+            detector.tap('TITLE');
             vi.advanceTimersByTime(1000);
 
             // Total 2000ms elapsed, but timer reset after second tap
@@ -150,24 +130,20 @@ describe('CheatCodeDetector', () => {
     });
 
     describe('edge cases', () => {
-        it('can complete sequence after restart', () => {
+        it('can complete sequence after LEVEL reset', () => {
             const onSuccess = vi.fn();
             const detector = createCheatCodeDetector({ onSuccess });
 
-            // Start, then mess up with extra TITLE
+            // Start, then mess up with LEVEL
             detector.tap('TITLE');
-            detector.tap('TITLE'); // Wrong! But restarts to progress 1
+            detector.tap('LEVEL'); // Reset
 
-            // Now complete correctly from progress 1
-            detector.tap('LEVEL');
-            detector.tap('LEVEL');
+            // Now complete correctly from beginning
             detector.tap('TITLE');
             detector.tap('TITLE');
             detector.tap('TITLE');
-            detector.tap('LEVEL');
-            detector.tap('LEVEL');
-            detector.tap('LEVEL');
-            detector.tap('LEVEL');
+            detector.tap('TITLE');
+            detector.tap('TITLE');
 
             expect(onSuccess).toHaveBeenCalledOnce();
         });
@@ -176,7 +152,7 @@ describe('CheatCodeDetector', () => {
             const detector = createCheatCodeDetector();
 
             // Complete sequence
-            ['TITLE', 'LEVEL', 'LEVEL', 'TITLE', 'TITLE', 'TITLE', 'LEVEL', 'LEVEL', 'LEVEL', 'LEVEL']
+            ['TITLE', 'TITLE', 'TITLE', 'TITLE', 'TITLE']
                 .forEach(t => detector.tap(t));
 
             expect(detector.getProgress()).toBe(0);
@@ -186,7 +162,7 @@ describe('CheatCodeDetector', () => {
             const onSuccess = vi.fn();
             const detector = createCheatCodeDetector({ onSuccess });
 
-            const sequence = ['TITLE', 'LEVEL', 'LEVEL', 'TITLE', 'TITLE', 'TITLE', 'LEVEL', 'LEVEL', 'LEVEL', 'LEVEL'];
+            const sequence = ['TITLE', 'TITLE', 'TITLE', 'TITLE', 'TITLE'];
 
             // First time
             sequence.forEach(t => detector.tap(t));
@@ -201,7 +177,7 @@ describe('CheatCodeDetector', () => {
             const detector = createCheatCodeDetector();
 
             detector.tap('TITLE');
-            detector.tap('LEVEL');
+            detector.tap('TITLE');
             expect(detector.getProgress()).toBe(2);
 
             detector.reset();
@@ -281,7 +257,7 @@ describe('setupCheatCode', () => {
         expect(detector.getProgress()).toBe(1);
     });
 
-    it('clicking level element calls tap with LEVEL', () => {
+    it('clicking level element resets progress', () => {
         global.document = {
             getElementById: vi.fn((id) => {
                 if (id === 'title-display') return mockTitleEl;
@@ -295,14 +271,15 @@ describe('setupCheatCode', () => {
         // First tap TITLE to start sequence
         const titleHandler = mockTitleEl.addEventListener.mock.calls[0][1];
         titleHandler({ stopPropagation: vi.fn() });
+        expect(detector.getProgress()).toBe(1);
 
-        // Then tap LEVEL
+        // Then tap LEVEL - should reset
         const levelHandler = mockLevelEl.addEventListener.mock.calls[0][1];
         const mockEvent = { stopPropagation: vi.fn() };
         levelHandler(mockEvent);
 
         expect(mockEvent.stopPropagation).toHaveBeenCalled();
-        expect(detector.getProgress()).toBe(2);
+        expect(detector.getProgress()).toBe(0);
     });
 
     it('calls haptics.vibrateRotate on progress', () => {
@@ -340,20 +317,14 @@ describe('setupCheatCode', () => {
         setupCheatCode({ onSuccess, haptics: mockHaptics });
 
         const titleHandler = mockTitleEl.addEventListener.mock.calls[0][1];
-        const levelHandler = mockLevelEl.addEventListener.mock.calls[0][1];
         const mockEvent = { stopPropagation: vi.fn() };
 
-        // Complete sequence: T, LL, TTT, LLLL
+        // Complete sequence: 5x TITLE
         titleHandler(mockEvent);  // 1
-        levelHandler(mockEvent);  // 2
-        levelHandler(mockEvent);  // 3
+        titleHandler(mockEvent);  // 2
+        titleHandler(mockEvent);  // 3
         titleHandler(mockEvent);  // 4
         titleHandler(mockEvent);  // 5
-        titleHandler(mockEvent);  // 6
-        levelHandler(mockEvent);  // 7
-        levelHandler(mockEvent);  // 8
-        levelHandler(mockEvent);  // 9
-        levelHandler(mockEvent);  // 10
 
         expect(mockHaptics.vibrateWin).toHaveBeenCalled();
         expect(onSuccess).toHaveBeenCalled();

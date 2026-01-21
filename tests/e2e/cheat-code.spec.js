@@ -69,18 +69,8 @@ test('secret hint trigger works with tap sequence', async ({ page }) => {
     const hintBefore = await page.evaluate(() => window.game.hintPiece);
     expect(hintBefore).toBeNull();
 
-    // Perform Secret Sequence: Title(1) -> Level(2) -> Title(3) -> Level(4)
-    // We use the spans we created
+    // Perform Secret Sequence: 5x TITLE tap
     const title = page.locator('#title-display');
-    const level = page.locator('#level-display');
-
-    await title.click();
-    await page.waitForTimeout(100); // Small human delay
-
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
 
     await title.click();
     await page.waitForTimeout(100);
@@ -88,14 +78,9 @@ test('secret hint trigger works with tap sequence', async ({ page }) => {
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-
-    await level.click();
+    await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
 
     // Verify hint is NOT null now (it should be triggered immediately)
     // Wait a bit for the next frame loop to pick it up
@@ -153,12 +138,8 @@ test('cheat code works after wrong first tap (LEVEL)', async ({ page }) => {
     await level.click();
     await page.waitForTimeout(100);
 
-    // Now do correct sequence
+    // Now do correct sequence: 5x TITLE
     await title.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
@@ -166,20 +147,14 @@ test('cheat code works after wrong first tap (LEVEL)', async ({ page }) => {
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
 
     await page.waitForTimeout(200);
     const hintAfter = await page.evaluate(() => window.game.hintPiece);
     expect(hintAfter).not.toBeNull();
 });
 
-test('cheat code restarts when tapping TITLE mid-sequence', async ({ page }) => {
+test('cheat code works after LEVEL reset mid-sequence', async ({ page }) => {
     test.setTimeout(120000);
     await page.goto('/');
 
@@ -226,31 +201,23 @@ test('cheat code restarts when tapping TITLE mid-sequence', async ({ page }) => 
     // Start sequence correctly
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-
-    // Tap TITLE when expecting LEVEL - this should restart
     await title.click();
     await page.waitForTimeout(100);
 
-    // Continue from restart point (TITLE already counted as 1)
+    // Tap LEVEL mid-sequence - this should reset
     await level.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
+
+    // Restart from beginning: 5x TITLE
     await title.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
 
     await page.waitForTimeout(200);
     const hintAfter = await page.evaluate(() => window.game.hintPiece);
@@ -321,7 +288,6 @@ test('cheat code can be triggered multiple times in same session', async ({ page
     await page.waitForFunction(() => window.game && window.game.pieces.length > 0);
 
     const title = page.locator('#title-display');
-    const level = page.locator('#level-display');
 
     // Track hint triggers
     let hintTriggerCount = 0;
@@ -334,12 +300,8 @@ test('cheat code can be triggered multiple times in same session', async ({ page
         };
     });
 
-    // First trigger
+    // First trigger: 5x TITLE
     await title.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
@@ -347,13 +309,7 @@ test('cheat code can be triggered multiple times in same session', async ({ page
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
     await page.waitForTimeout(200);
 
     hintTriggerCount = await page.evaluate(() => window.__hintTriggerCount);
@@ -363,12 +319,8 @@ test('cheat code can be triggered multiple times in same session', async ({ page
     await page.click('.piece');
     await page.waitForTimeout(100);
 
-    // Second trigger - should work without duplicates
+    // Second trigger: 5x TITLE
     await title.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
@@ -376,13 +328,7 @@ test('cheat code can be triggered multiple times in same session', async ({ page
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
     await page.waitForTimeout(200);
 
     hintTriggerCount = await page.evaluate(() => window.__hintTriggerCount);
@@ -436,27 +382,16 @@ test('cheat code prevents duplicate listeners via data-cheat-listener attribute'
 
     // Verify cheat code still works (single listener behavior)
     const title = page.locator('#title-display');
-    const level = page.locator('#level-display');
 
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
     await title.click();
     await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
-    await page.waitForTimeout(100);
-    await level.click();
+    await title.click();
     await page.waitForTimeout(200);
 
     const hintAfter = await page.evaluate(() => window.game.hintPiece);
