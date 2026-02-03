@@ -23,7 +23,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm start',
+    command: 'bun run start',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
   },
