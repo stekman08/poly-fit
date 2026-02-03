@@ -56,6 +56,27 @@ describe('Game - checkWin edge cases', () => {
         expect(game.checkWin()).toBe(false);
     });
 
+    it('returns false when piece occupies outside cutout', () => {
+        // Arrange
+        const puzzleData = {
+            targetGrid: [
+                [1, -2],
+                [1, -2]
+            ],
+            pieces: [
+                { id: 0, shape: SHAPES.Square, color: '#ff0000' }
+            ]
+        };
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 0, y: 0 });
+
+        // Act
+        const result = game.checkWin();
+
+        // Assert
+        expect(result).toBe(false);
+    });
+
     it('returns false when there are gaps in target', () => {
         const puzzleData = {
             targetGrid: [
@@ -344,5 +365,39 @@ describe('Game - hint system', () => {
         // After flip + 2 rotations, shape should be transformed
         expect(hint.x).toBe(0);
         expect(hint.y).toBe(0);
+    });
+
+    it('returns null when piece matches effective transform', () => {
+        // Arrange
+        const originalShape = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
+        const startShape = [{ x: 0, y: 0 }, { x: 0, y: 1 }];
+        const puzzleData = {
+            targetGrid: [
+                [1],
+                [1]
+            ],
+            pieces: [
+                {
+                    id: 0,
+                    shape: startShape,
+                    originalShape,
+                    color: '#ff0000',
+                    solutionX: 0,
+                    solutionY: 0,
+                    solutionRotation: 1,
+                    solutionFlipped: false,
+                    effectiveRotation: 0,
+                    effectiveFlipped: false
+                }
+            ]
+        };
+        const game = new Game(puzzleData);
+        game.updatePieceState(0, { x: 0, y: 0, rotation: 0, flipped: false });
+
+        // Act
+        const hint = game.getHint();
+
+        // Assert
+        expect(hint).toBeNull();
     });
 });

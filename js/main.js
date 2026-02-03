@@ -146,7 +146,6 @@ function loop() {
 // Worker manager for puzzle generation
 const workerManager = createWorkerManager({
     onPuzzleReady: startLevelWithData,
-    onError: () => { },
     showLoading: () => {
         const overlay = document.getElementById('loading-overlay');
         const loadingTitle = document.querySelector('#loading-overlay h2');

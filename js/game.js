@@ -19,18 +19,33 @@ export class Game {
     // Get a hint: find a piece not in correct position and show its solution
     getHint() {
         for (const piece of this.pieces) {
+            const targetRotation = piece.effectiveRotation ?? piece.solutionRotation ?? 0;
+            const targetFlipped = piece.effectiveFlipped ?? piece.solutionFlipped ?? false;
+
             // Check if piece is in correct position
             const inCorrectPosition =
                 Math.round(piece.x) === piece.solutionX &&
                 Math.round(piece.y) === piece.solutionY &&
-                piece.rotation === piece.solutionRotation &&
-                piece.flipped === piece.solutionFlipped;
+                piece.rotation === targetRotation &&
+                piece.flipped === targetFlipped;
 
             if (!inCorrectPosition) {
+                const hasSolutionTransform =
+                    piece.solutionRotation !== undefined || piece.solutionFlipped !== undefined;
+                const solutionRotation = hasSolutionTransform
+                    ? piece.solutionRotation ?? 0
+                    : targetRotation;
+                const solutionFlipped = hasSolutionTransform
+                    ? piece.solutionFlipped ?? false
+                    : targetFlipped;
+                const solutionBaseShape = hasSolutionTransform
+                    ? (piece.originalShape ?? piece.shape)
+                    : piece.shape;
+
                 const solutionShape = applyTransforms(
-                    piece.originalShape,
-                    piece.solutionRotation,
-                    piece.solutionFlipped
+                    solutionBaseShape,
+                    solutionRotation,
+                    solutionFlipped
                 );
 
                 this.hintPiece = piece;
@@ -125,6 +140,7 @@ export class Game {
                 if (targetVal === 1 && currentVal !== 1) return false; // Gap in target
                 if (targetVal === 0 && currentVal !== 0) return false; // Piece sticking out
                 if (targetVal === -1 && currentVal !== 0) return false; // Piece on hole
+                if (targetVal === -2 && currentVal !== 0) return false; // Piece outside shape
             }
         }
 

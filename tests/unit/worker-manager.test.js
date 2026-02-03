@@ -54,7 +54,6 @@ describe('worker-manager', () => {
         it('posts GENERATE message to worker', () => {
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -73,7 +72,6 @@ describe('worker-manager', () => {
         it('does not generate if already generating', () => {
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -90,7 +88,6 @@ describe('worker-manager', () => {
             const onPuzzleReady = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady,
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -117,7 +114,6 @@ describe('worker-manager', () => {
             const showLoading = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady,
-                onError: vi.fn(),
                 showLoading,
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -144,7 +140,6 @@ describe('worker-manager', () => {
             const showLoading = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady,
-                onError: vi.fn(),
                 showLoading,
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -166,7 +161,6 @@ describe('worker-manager', () => {
             const hideLoading = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady,
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading,
                 showError: vi.fn()
@@ -185,17 +179,19 @@ describe('worker-manager', () => {
             expect(onPuzzleReady).toHaveBeenCalledWith({ level: 10, data: 'test' });
         });
 
-        it('sets isGenerating to false after puzzle received (allows subsequent generation)', () => {
+        it('pre-generates the next level after puzzle received', () => {
+            // Arrange
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
             });
 
             manager.startLevel(10);
+            mockWorkerInstance.postMessage.mockClear();
 
+            // Act
             capturedOnMessage({
                 data: {
                     type: 'PUZZLE_GENERATED',
@@ -203,11 +199,7 @@ describe('worker-manager', () => {
                 }
             });
 
-            // After receiving puzzle, isGenerating should be false
-            // so preGenerateNextLevel should work now
-            mockWorkerInstance.postMessage.mockClear();
-            manager.preGenerateNextLevel(11);
-
+            // Assert
             expect(mockWorkerInstance.postMessage).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'GENERATE',
@@ -220,7 +212,6 @@ describe('worker-manager', () => {
             const showLoading = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading,
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -237,13 +228,71 @@ describe('worker-manager', () => {
 
             expect(showLoading).toHaveBeenCalled();
         });
+
+        it('uses pre-generated puzzle even when level is missing', () => {
+            // Arrange
+            const onPuzzleReady = vi.fn();
+            const manager = createWorkerManager({
+                onPuzzleReady,
+                showLoading: vi.fn(),
+                hideLoading: vi.fn(),
+                showError: vi.fn()
+            });
+
+            manager.preGenerateNextLevel(5);
+            capturedOnMessage({
+                data: {
+                    type: 'PUZZLE_GENERATED',
+                    puzzle: { grid: [[1]] }
+                }
+            });
+
+            // Act
+            manager.startLevel(5);
+
+            // Assert
+            expect(onPuzzleReady).toHaveBeenCalledWith(
+                expect.objectContaining({ level: 5 })
+            );
+        });
+
+        it('does not use pre-generated puzzle for the wrong level', () => {
+            // Arrange
+            const onPuzzleReady = vi.fn();
+            const manager = createWorkerManager({
+                onPuzzleReady,
+                showLoading: vi.fn(),
+                hideLoading: vi.fn(),
+                showError: vi.fn()
+            });
+
+            manager.preGenerateNextLevel(5);
+            manager.startLevel(6);
+            mockWorkerInstance.postMessage.mockClear();
+
+            // Act
+            capturedOnMessage({
+                data: {
+                    type: 'PUZZLE_GENERATED',
+                    puzzle: { level: 5, grid: [[1]] }
+                }
+            });
+
+            // Assert
+            expect(onPuzzleReady).not.toHaveBeenCalled();
+            expect(mockWorkerInstance.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'GENERATE',
+                    config: expect.objectContaining({ level: 6 })
+                })
+            );
+        });
     });
 
     describe('error handling', () => {
         it('retries on error when user is waiting', () => {
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -272,7 +321,6 @@ describe('worker-manager', () => {
             const showError = vi.fn();
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError
@@ -296,7 +344,6 @@ describe('worker-manager', () => {
         it('does not retry if no user waiting', () => {
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()
@@ -317,13 +364,42 @@ describe('worker-manager', () => {
             // Should NOT retry for background generation
             expect(mockWorkerInstance.postMessage).not.toHaveBeenCalled();
         });
+
+        it('switches to user request when pre-generation fails', () => {
+            // Arrange
+            const manager = createWorkerManager({
+                onPuzzleReady: vi.fn(),
+                showLoading: vi.fn(),
+                hideLoading: vi.fn(),
+                showError: vi.fn()
+            });
+
+            manager.preGenerateNextLevel(5);
+            manager.startLevel(6);
+            mockWorkerInstance.postMessage.mockClear();
+
+            // Act
+            capturedOnMessage({
+                data: {
+                    type: 'ERROR',
+                    error: 'Generation failed'
+                }
+            });
+
+            // Assert
+            expect(mockWorkerInstance.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'GENERATE',
+                    config: expect.objectContaining({ level: 6 })
+                })
+            );
+        });
     });
 
     describe('retry', () => {
         it('resets retry count and starts generation', () => {
             const manager = createWorkerManager({
                 onPuzzleReady: vi.fn(),
-                onError: vi.fn(),
                 showLoading: vi.fn(),
                 hideLoading: vi.fn(),
                 showError: vi.fn()

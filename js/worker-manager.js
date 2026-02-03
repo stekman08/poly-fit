@@ -10,7 +10,6 @@ import { MAX_WORKER_RETRIES } from './config/constants.js';
  * Creates a worker manager for puzzle generation
  * @param {Object} options
  * @param {Function} options.onPuzzleReady - Called when puzzle is ready to start (puzzleData) => void
- * @param {Function} options.onError - Called on unrecoverable error () => void
  * @param {Function} options.showLoading - Show loading overlay () => void
  * @param {Function} options.hideLoading - Hide loading overlay () => void
  * @param {Function} options.showError - Show error UI with retry button () => void
@@ -19,7 +18,6 @@ import { MAX_WORKER_RETRIES } from './config/constants.js';
 export function createWorkerManager(options) {
     const {
         onPuzzleReady,
-        onError,
         showLoading,
         hideLoading,
         showError
@@ -29,47 +27,96 @@ export function createWorkerManager(options) {
 
     let preGeneratedPuzzle = null;
     let isGenerating = false;
-    let pendingLevelStart = null;
-    let pendingConfig = null;
+    let waitingLevel = null;
+    let currentRequest = null;
+    let currentConfig = null;
     let generationRetryCount = 0;
+
+    function postGenerate(level, kind, configOverride = null) {
+        const config = configOverride ?? getDifficultyParams(level);
+        config.level = level;
+        const reqId = Date.now();
+
+        currentRequest = { level, kind, reqId };
+        currentConfig = config;
+        isGenerating = true;
+
+        worker.postMessage({
+            type: 'GENERATE',
+            config,
+            reqId
+        });
+    }
 
     // Handle worker messages
     worker.onmessage = function (e) {
         const { type, puzzle, error, reqId } = e.data;
 
         if (type === 'PUZZLE_GENERATED') {
+            if (currentRequest && reqId && currentRequest.reqId !== reqId) {
+                return;
+            }
             generationRetryCount = 0; // Reset on success
+            isGenerating = false;
 
-            if (pendingLevelStart !== null) {
-                // We were waiting for this!
-                const completedLevel = pendingLevelStart;
-                pendingLevelStart = null;
+            const completedLevel = currentRequest?.level ?? puzzle?.level;
+            const puzzleWithLevel = puzzle?.level !== undefined ? puzzle : { ...puzzle, level: completedLevel };
+            const waitingForThisLevel = waitingLevel !== null && puzzleWithLevel?.level === waitingLevel;
+
+            currentRequest = null;
+            currentConfig = null;
+
+            if (waitingForThisLevel) {
+                const deliveredLevel = waitingLevel;
+                waitingLevel = null;
                 hideLoading();
-                onPuzzleReady(puzzle);
+                onPuzzleReady(puzzleWithLevel);
                 // Pre-generate next level
-                preGenerateNextLevel(completedLevel + 1);
+                preGenerateNextLevel(deliveredLevel + 1);
             } else {
                 // Store for later (background pre-generation)
-                preGeneratedPuzzle = puzzle;
+                preGeneratedPuzzle = puzzleWithLevel;
+
+                if (waitingLevel !== null) {
+                    // User is waiting for a different level; start it now
+                    showLoading();
+                    generationRetryCount = 0;
+                    postGenerate(waitingLevel, 'user');
+                }
+            }
+        } else if (type === 'ERROR') {
+            if (currentRequest && reqId && currentRequest.reqId !== reqId) {
+                return;
             }
             isGenerating = false;
-        } else if (type === 'ERROR') {
-            isGenerating = false;
+            const failedLevel = currentRequest?.level ?? null;
+            const userWaitingForFailed = waitingLevel !== null && waitingLevel === failedLevel;
 
-            if (pendingLevelStart !== null) {
+            if (userWaitingForFailed) {
                 // Failed while user was waiting
                 generationRetryCount++;
 
                 if (generationRetryCount > MAX_WORKER_RETRIES) {
                     showError();
-                    pendingLevelStart = null;
+                    waitingLevel = null;
+                    currentRequest = null;
+                    currentConfig = null;
                     isGenerating = false;
                     return;
                 }
 
                 // Retry
-                isGenerating = true;
-                worker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
+                postGenerate(failedLevel, 'user', currentConfig);
+                return;
+            }
+
+            currentRequest = null;
+            currentConfig = null;
+
+            if (waitingLevel !== null) {
+                // Switch from failed pre-generation to the user-requested level
+                generationRetryCount = 0;
+                postGenerate(waitingLevel, 'user');
             }
         }
     };
@@ -84,18 +131,10 @@ export function createWorkerManager(options) {
         // Don't pre-generate if we already have the right one
         if (preGeneratedPuzzle && preGeneratedPuzzle.level === nextLevel) return;
 
-        isGenerating = true;
         generationRetryCount = 0;
         preGeneratedPuzzle = null; // Clear old
 
-        const config = getDifficultyParams(nextLevel);
-        config.level = nextLevel;
-
-        worker.postMessage({
-            type: 'GENERATE',
-            config,
-            reqId: Date.now()
-        });
+        postGenerate(nextLevel, 'pre');
     }
 
     /**
@@ -103,10 +142,12 @@ export function createWorkerManager(options) {
      * @param {number} level - Level number to start
      */
     function startLevel(level) {
+        waitingLevel = level;
         // Check if we have a pre-generated puzzle for this level
         if (preGeneratedPuzzle && preGeneratedPuzzle.level === level) {
             const p = preGeneratedPuzzle;
             preGeneratedPuzzle = null;
+            waitingLevel = null;
             onPuzzleReady(p);
 
             // Immediately start working on the NEXT one
@@ -117,20 +158,14 @@ export function createWorkerManager(options) {
         // Check if we are currently generating THIS level
         if (isGenerating) {
             showLoading();
-            pendingLevelStart = level;
             return;
         }
 
         // Nothing pre-generated, and not generating. Start now.
         showLoading();
 
-        isGenerating = true;
         generationRetryCount = 0;
-        pendingLevelStart = level;
-
-        pendingConfig = getDifficultyParams(level);
-        pendingConfig.level = level;
-        worker.postMessage({ type: 'GENERATE', config: pendingConfig, reqId: Date.now() });
+        postGenerate(level, 'user');
     }
 
     /**
@@ -139,13 +174,9 @@ export function createWorkerManager(options) {
      */
     function retry(level) {
         generationRetryCount = 0;
-        isGenerating = true;
-        pendingLevelStart = level;
+        waitingLevel = level;
 
-        const config = getDifficultyParams(level);
-        config.level = level;
-        pendingConfig = config;
-        worker.postMessage({ type: 'GENERATE', config, reqId: Date.now() });
+        postGenerate(level, 'user');
     }
 
     /**
