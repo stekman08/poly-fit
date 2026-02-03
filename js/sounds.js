@@ -15,13 +15,19 @@ class SoundManager {
         if (!this.audioContext) {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) {
-                    this.audioContext = new AudioCtx();
+                if (!AudioCtx) {
+                    this.enabled = false;
+                    return;
                 }
+                this.audioContext = new AudioCtx();
             } catch {
                 this.enabled = false;
                 return;
             }
+        }
+        if (!this.audioContext) {
+            this.enabled = false;
+            return;
         }
         // Resume if suspended (mobile browsers)
         if (this.audioContext?.state === 'suspended') {
@@ -32,6 +38,7 @@ class SoundManager {
     playRotate() {
         if (!this.enabled) return;
         this.init();
+        if (!this.audioContext) return;
 
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
@@ -53,6 +60,7 @@ class SoundManager {
     playFlip() {
         if (!this.enabled) return;
         this.init();
+        if (!this.audioContext) return;
 
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
@@ -74,6 +82,7 @@ class SoundManager {
     playSnap() {
         if (!this.enabled) return;
         this.init();
+        if (!this.audioContext) return;
 
         const osc = this.audioContext.createOscillator();
         const gain = this.audioContext.createGain();
@@ -95,6 +104,7 @@ class SoundManager {
     playWin() {
         if (!this.enabled) return;
         this.init();
+        if (!this.audioContext) return;
 
         const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
         const duration = 0.15;

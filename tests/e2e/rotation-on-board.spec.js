@@ -158,4 +158,87 @@ test.describe('Rotation on board', () => {
         expect(result.rotated).toBe(true);
         expect(result.snapped).toBe(true);
     });
+
+    test('rotation on board triggers win when completing solution', async ({ page }) => {
+        // Arrange
+        await startGame(page);
+        const setupResult = await page.evaluate(() => {
+            const game = window.game;
+
+            const normalize = (shape) => {
+                let minX = shape[0].x;
+                let minY = shape[0].y;
+                for (const block of shape) {
+                    if (block.x < minX) minX = block.x;
+                    if (block.y < minY) minY = block.y;
+                }
+                return shape.map(block => ({ x: block.x - minX, y: block.y - minY }));
+            };
+
+            const rotate = (shape) => normalize(shape.map(block => ({ x: -block.y, y: block.x })));
+
+            const shapeKey = (shape) =>
+                shape
+                    .map(block => `${block.x},${block.y}`)
+                    .sort()
+                    .join(';');
+
+            const pieces = game.pieces;
+            let chosen = null;
+
+            for (const candidate of pieces) {
+                const rotated = rotate(candidate.currentShape);
+                if (shapeKey(rotated) === shapeKey(normalize(candidate.currentShape))) {
+                    continue;
+                }
+
+                for (const piece of pieces) {
+                    const targetRotation = piece.effectiveRotation ?? piece.solutionRotation ?? 0;
+                    const targetFlipped = piece.effectiveFlipped ?? piece.solutionFlipped ?? false;
+                    const rotation = piece.id === candidate.id
+                        ? (targetRotation + 3) % 4
+                        : targetRotation;
+
+                    game.updatePieceState(piece.id, {
+                        x: piece.solutionX,
+                        y: piece.solutionY,
+                        rotation,
+                        flipped: targetFlipped
+                    });
+                }
+
+                if (!game.checkWin()) {
+                    chosen = candidate;
+                    break;
+                }
+            }
+
+            if (!chosen) {
+                return { success: false };
+            }
+
+            window.requestRender && window.requestRender();
+
+            return {
+                success: true,
+                id: chosen.id,
+                beforeWin: game.checkWin()
+            };
+        });
+
+        expect(setupResult.success).toBe(true);
+        expect(setupResult.beforeWin).toBe(false);
+        await page.waitForTimeout(100);
+
+        const pieceEl = page.locator(`.piece[data-piece-id="${setupResult.id}"]`);
+        const pieceBox = await pieceEl.boundingBox();
+
+        // Act
+        await page.mouse.click(pieceBox.x + 15, pieceBox.y + 15);
+        await page.waitForFunction(() => window.isWinning && window.isWinning());
+
+        // Assert
+        const isWinning = await page.evaluate(() => window.isWinning && window.isWinning());
+        expect(isWinning).toBe(true);
+    });
 });

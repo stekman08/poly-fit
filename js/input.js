@@ -339,6 +339,8 @@ export class InputHandler {
         // Only snap if piece was on the board (not in dock)
         if (wasOnBoard) {
             this.snapToValidPosition(piece);
+            this.onInteraction(true);
+            return;
         }
         this.onInteraction();
     }
