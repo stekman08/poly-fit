@@ -8,6 +8,7 @@ name: Run Tests
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   test:
@@ -46,7 +47,8 @@ jobs:
           retention-days: 30
 
       - name: Comment coverage on PR
-        uses: romeovs/lcov-reporter-action@dda1c9b1fa1622b225e9acd87a248751dbcc6ada
+        uses: >-
+          romeovs/lcov-reporter-action@dda1c9b1fa1622b225e9acd87a248751dbcc6ada
         if: github.event_name == 'pull_request'
         with:
           lcov-file: ./coverage/lcov.info
