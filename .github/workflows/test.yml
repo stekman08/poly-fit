@@ -1,9 +1,14 @@
+---
 name: Run Tests
 
-on:
+"on":
   pull_request:
     branches: [main]
   workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
@@ -11,28 +16,27 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          node-version: '24'
-          cache: 'npm'
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Run unit tests with coverage
-        run: npm run test:coverage
+        run: bun run test:coverage
 
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: bun run test:e2e
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: test-results
@@ -43,7 +47,8 @@ jobs:
           retention-days: 30
 
       - name: Comment coverage on PR
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: >-
+          romeovs/lcov-reporter-action@dda1c9b1fa1622b225e9acd87a248751dbcc6ada
         if: github.event_name == 'pull_request'
         with:
           lcov-file: ./coverage/lcov.info
